@@ -39,8 +39,12 @@ How to Stop the Project
 
 How to Run the project again: 
 
-- Open a terminal and type (Run the backend): npx nodemon server.js
-- Open another terminal and type (Run the frontend): npm run dev
+Run the backend
+- Open a terminal and cd to the folder backend: cd backend
+- Then type: npx nodemon server.js
+
+Run the Frontend
+- Open another terminal and type: npm run dev
 
 
 
