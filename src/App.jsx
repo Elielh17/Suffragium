@@ -36,6 +36,7 @@ function App() {
             <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/create-election" element={<CreateElection />} />
+                
                 {/* Other Routes */}
             </Routes>
         </Router>

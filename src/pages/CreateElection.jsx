@@ -3,6 +3,7 @@ import "./CreateElection.css"; // Import CSS for styling
 
 const CreateElection = () => {
     const [electionName, setElectionName] = useState("");
+    const [electionDescription, setElectionDescription] = useState("");
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [candidates, setCandidates] = useState([]);
@@ -26,6 +27,7 @@ const CreateElection = () => {
         e.preventDefault();
         const electionData = {
             name: electionName,
+            description: electionDescription,
             start_date: startDate,
             end_date: endDate,
             candidates: candidates,
@@ -46,6 +48,16 @@ const CreateElection = () => {
                     onChange={(e) => setElectionName(e.target.value)}
                     required
                 />
+
+                {/* Election Description */}
+                <label>Election Description:</label>
+                <textarea
+                    value={electionDescription}
+                    onChange={(e) => setElectionDescription(e.target.value)}
+                    rows="4"
+                    placeholder="Enter a brief description of the election..."
+                    required
+                ></textarea>
 
                 {/* Start Date */}
                 <label>Start Date:</label>
