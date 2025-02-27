@@ -1,0 +1,87 @@
+/* Basic Page Layout */
+.create-election-container {
+    max-width: 500px;
+    margin: 80px auto; /* Adjusts for navbar */
+    padding: 20px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+/* Form Fields */
+label {
+    display: block;
+    margin-top: 10px;
+    font-weight: bold;
+}
+
+input {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+/* Candidate List */
+.candidate-list {
+    margin-top: 10px;
+    text-align: left;
+}
+
+.candidate-item {
+    display: flex;
+    justify-content: space-between;
+    background: #f1f1f1;
+    padding: 5px;
+    margin-top: 5px;
+    border-radius: 4px;
+}
+
+.candidate-item button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: red;
+}
+
+/* Add Candidate Section */
+.add-candidate {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+}
+
+.add-candidate input {
+    flex-grow: 1;
+}
+
+.add-candidate button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.add-candidate button:hover {
+    background-color: #0056b3;
+}
+
+/* Submit Button */
+.submit-btn {
+    margin-top: 15px;
+    width: 100%;
+    background-color: #28a745;
+    color: white;
+    padding: 10px;
+    border: none;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.submit-btn:hover {
+    background-color: #218838;
+}

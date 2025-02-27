@@ -1,0 +1,25 @@
+/* Ensure the Home page is centered */
+.home-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* Center vertically */
+    align-items: center; /* Center horizontally */
+    height: 100vh; /* Take full viewport height */
+    width: 100vw; /* Take full viewport width */
+    text-align: center;
+}
+
+/* Title Styling */
+.home-title {
+    font-size: 36px;
+    font-weight: bold;
+    color: #007bff;
+    margin-bottom: 10px;
+}
+
+/* Description Styling */
+.home-description {
+    font-size: 18px;
+    color: #333;
+    max-width: 600px; /* Prevents overly wide text */
+}
