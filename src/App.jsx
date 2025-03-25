@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Home from "./pages/Home"; 
 import CreateElection from "./pages/CreateElection";
+import TableTest from "./pages/TableTest";
 import { useState, useEffect } from "react";
 
 const API_URL = "http://localhost:5000";
@@ -36,7 +37,9 @@ function App() {
             <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/create-election" element={<CreateElection />} />
+                <Route path="/table-test" element={<TableTest />} />
                 
+
                 {/* Other Routes */}
             </Routes>
         </Router>

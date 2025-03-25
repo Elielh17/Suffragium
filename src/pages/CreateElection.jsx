@@ -23,8 +23,9 @@ const CreateElection = () => {
     };
 
     // Function to submit the election
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
+        
         const electionData = {
             name: electionName,
             description: electionDescription,
@@ -32,8 +33,25 @@ const CreateElection = () => {
             end_date: endDate,
             candidates: candidates,
         };
-        console.log("Election Created:", electionData);
-        alert("Election Created Successfully!");
+    
+        try {
+            const response = await fetch("http://localhost:5000/api/elections", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(electionData),
+            });
+    
+            if (response.ok) {
+                alert("Election Created Successfully!");
+            } else {
+                alert("Failed to create election");
+            }
+        } catch (error) {
+            console.error("Error submitting election:", error);
+            alert("An error occurred while creating the election");
+        }
     };
 
     return (
