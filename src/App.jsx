@@ -4,6 +4,7 @@ import Home from "./pages/Home";
 import CreateElection from "./pages/CreateElection";
 import TableTest from "./pages/TableTest";
 import { useState, useEffect } from "react";
+import Login from "./pages/Login";
 
 const API_URL = "http://localhost:5000";
 
@@ -38,6 +39,7 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/create-election" element={<CreateElection />} />
                 <Route path="/table-test" element={<TableTest />} />
+                <Route path="/login" element={<Login />} />
                 
 
                 {/* Other Routes */}
