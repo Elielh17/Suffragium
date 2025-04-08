@@ -1,5 +1,8 @@
 import { useState } from "react";
 import "./CreateElection.css"; // Import CSS for styling
+import { supabase } from "../supabaseClient";
+import { useEffect } from "react";
+
 
 const CreateElection = () => {
     const [electionName, setElectionName] = useState("");
@@ -22,20 +25,83 @@ const CreateElection = () => {
         setCandidates(candidates.filter((_, i) => i !== index));
     };
 
-    // Function to submit the election
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        const electionData = {
-            name: electionName,
-            description: electionDescription,
-            start_date: startDate,
-            end_date: endDate,
-            candidates: candidates,
+    useEffect(() => {
+        const checkSession = async () => {
+          const {
+            data: { session },
+            error,
+          } = await supabase.auth.getSession();
+      
+          if (error) {
+            console.error("Error retrieving session:", error);
+          }
+      
+          if (session) {
+            console.log("✅ Session is valid!");
+            console.log("User ID:", session.user.id);
+            console.log("Email:", session.user.email);
+          } else {
+            console.warn("❌ No active session. User is not logged in.");
+          }
         };
-        console.log("Election Created:", electionData);
-        alert("Election Created Successfully!");
-    };
+      
+        checkSession();
+      }, []);
 
+    // Function to submit the election
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+    
+        // Format datetime-local to just "YYYY-MM-DD"
+        const formattedStartDate = startDate.split("T")[0];
+        const formattedEndDate = endDate.split("T")[0];
+    
+        const electionData = {
+            electionname: electionName,
+            description: electionDescription,
+            startdate: formattedStartDate,
+            enddate: formattedEndDate,
+            statuscode: 1,
+            typecode: 1,
+            permittedrolecodes: [],
+        };
+    
+        const { data, error } = await supabase
+            .from("election")
+            .insert([electionData])
+            .select();
+    
+        console.log("Insert result:", data, error);
+    
+        if (error) {
+            console.error("Election creation failed:", error);
+            alert("Failed to create the election.");
+            return;
+        }
+    
+        const electionId = data[0].electionid;
+    
+        // Insert candidates
+        const candidateInserts = candidates.map((name) => ({
+            electionid: electionId,
+            name: name,
+            description: "",
+        }));
+    
+        const { error: candidateError } = await supabase
+            .from("candidates")
+            .insert(candidateInserts);
+    
+        if (candidateError) {
+            console.error("Candidate insertion failed:", candidateError);
+            alert("Election was created but candidates couldn't be added.");
+            return;
+        }
+    
+        alert("Election and candidates created successfully!");
+    };
+       
+    
     return (
         <div className="create-election-container">
             <h2>Create New Election</h2>

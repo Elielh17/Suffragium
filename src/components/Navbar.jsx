@@ -22,6 +22,8 @@ const Navbar = () => {
                 <Link to="/create-election" className="nav-link">Create an Election</Link>
                 <Link to="/join-election" className="nav-link">Join an Election</Link>
                 <Link to="/view-results" className="nav-link">View Results</Link>
+                <Link to="/table-test" className="nav-link">View election table test</Link>
+                <Link to="/login" className="nav-link">Login</Link>
             </div>
 
             {/* User Dropdown on the Right */}
