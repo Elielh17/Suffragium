@@ -33,7 +33,8 @@ const Login = () => {
     )
   }
 
-  return <div style={{ textAlign: "center", marginTop: "100px" }}>✅ You’re logged in!</div>
+  return <div style={{ textAlign: "center", marginTop: "100px" }}><p>You’re logged in as: {session.user.email}</p>
+</div>
 }
 
 export default Login
