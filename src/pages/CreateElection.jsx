@@ -1,5 +1,5 @@
 import { useState } from "react";
-import "./CreateElection.css"; // Import CSS for styling
+import "./CreateElection.css";
 import { supabase } from "../supabaseClient";
 import { useEffect } from "react";
 

@@ -13,7 +13,7 @@ const Home = () => {
             {/* Buttons to navigate to Create and Join Election pages */}
             <div className="home-buttons">
                 <Link to="/create-election" className="home-button">Create Election</Link>
-                <Link to="/join-election" className="home-button join">Join Election</Link>
+                <Link to="/view-elections" className="home-button join">View Elections</Link>
             </div>
         </div>
     );
