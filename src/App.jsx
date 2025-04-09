@@ -5,6 +5,8 @@ import CreateElection from "./pages/CreateElection";
 //import TableTest from "./pages/TableTest";
 import { useState, useEffect } from "react";
 import Login from "./pages/Login";
+import ViewElections from "./pages/ViewElections";
+import JoinElection from "./pages/JoinElection";
 
 const API_URL = "http://localhost:3000";
 
@@ -40,7 +42,8 @@ function App() {
                 <Route path="/create-election" element={<CreateElection />} />
                 {/* <Route path="/table-test" element={<TableTest />} /> */}
                 <Route path="/login" element={<Login />} />
-                
+                <Route path="/view-elections" element={<ViewElections />} />
+                <Route path="/join-election" element={<JoinElection/>} />
 
                 {/* Other Routes */}
             </Routes>
