@@ -82,7 +82,6 @@ const ViewElection = () => {
   const handleJoin = async (electionId) => {
     if (!userId) return;
 
-    // Check if already joined
     const { data: existingVote } = await supabase
       .from("votes")
       .select("*")
@@ -96,13 +95,12 @@ const ViewElection = () => {
     }
 
     const { error } = await supabase.from("votes").insert([
-        {
-          userid: userId,
-          electionid: electionId,
-          candidateid: null,
-        },
-      ]);
-      
+      {
+        userid: userId,
+        electionid: electionId,
+        candidateid: null,
+      },
+    ]);
 
     if (!error) {
       setJoinedElections([...joinedElections, electionId]);
@@ -149,6 +147,9 @@ const ViewElection = () => {
             <div className="candidate-grid">
               {selectedElection.candidates.map((c) => (
                 <div key={c.id} className="candidate-card">
+                  {c.image && (
+                    <img src={c.image} alt={c.name} className="candidate-image" />
+                  )}
                   <p><strong>{c.name}</strong></p>
                   <p>{c.description || "No description available."}</p>
                   <p className="votes">Votes: {c.voteCount}</p>

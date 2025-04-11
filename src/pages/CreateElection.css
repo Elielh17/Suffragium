@@ -1,99 +1,235 @@
-/* Centering the Create Election Form */
-.create-election-container {
-    max-width: 500px;
-    margin: 80px auto;
-    padding: 20px;
-    background: brown;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    text-align: center;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-}
-
-/* Form Fields */
-label {
-    display: block;
-    margin-top: 10px;
-    font-weight: bold;
-}
-
-input,
-textarea {
+/* Page Layout */
+  /* Page Layout */
+  .page-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 80px; 
     width: 100%;
-    padding: 8px;
-    margin-top: 5px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-}
-
-/* Description Box Styling */
-textarea {
+    min-height: 100vh;
+    background-color: #121212;
+    box-sizing: border-box;
+  }
+  
+  .create-election-wrapper {
+    width: 100%;
+    max-width: 720px;
+    padding: 0 16px;
+  }
+  
+  
+  .content {
+    width: 100%; /* Fixed from original 200% */
+    margin: 0 auto; /* Horizontal centering */
+    background: #1f1f1f;
+    padding: 32px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    color: #fff;
+  }
+/*   
+  .page-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Horizontal centering 
+    padding: 40px 20px 20px;
+    width: 100%;
+  }
+   */
+  /* Center the heading */
+  /* .page-wrapper > h2 {
+    text-align: center;
+    margin-bottom: 24px;
+    color: #00b4d8;
+  } */
+  
+  /* Form Headline */
+  /* .create-election-container h2 {
+    margin-bottom: 24px;
+    font-size: 28px;
+    color: #00b4d8;
+    text-align: center;
+  } */
+  
+  /* Form Fields */
+  label {
+    display: block;
+    margin-top: 18px;
+    margin-bottom: 6px;
+    font-weight: 600;
+    color: #ccc;
+  }
+  
+  input,
+  textarea,
+  select {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 16px;
+    background: #2b2b2b;
+    color: #fff;
+    border: 1px solid #444;
+    border-radius: 6px;
+  }
+  
+  input::placeholder,
+  textarea::placeholder {
+    color: #888;
+  }
+  
+  textarea {
     resize: vertical;
     min-height: 80px;
     max-height: 200px;
-}
-
-/* Candidate List */
-.candidate-list {
+  }
+  
+  /* Election Type Dropdown */
+  select {
+    appearance: none;
+    cursor: pointer;
+  }
+  
+  /* Password Section */
+  .password-toggle {
+    margin-top: 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  .password-toggle input[type="checkbox"] {
+    transform: scale(1.4);
+    cursor: pointer;
+  }
+  
+  .password-input input {
     margin-top: 10px;
-    text-align: left;
-}
-
-.candidate-item {
+  }
+  
+  /* Candidate List */
+  .candidate-list {
+    margin-top: 16px;
+  }
+  
+  .candidate-item {
     display: flex;
     justify-content: space-between;
-    background: #f1f1f1;
-    padding: 5px;
-    margin-top: 5px;
-    border-radius: 4px;
-}
-
-.candidate-item button {
+    align-items: center;
+    background: #2e2e2e;
+    padding: 10px 12px;
+    margin-top: 8px;
+    border-radius: 6px;
+  }
+  
+  .candidate-item p {
+    margin: 0;
+    color: #ccc;
+    font-size: 15px;
+  }
+  
+  .candidate-item button {
     background: none;
     border: none;
+    color: #ff4d4d;
+    font-size: 20px;
     cursor: pointer;
-    color: red;
-}
-
-/* Add Candidate Section */
-.add-candidate {
-    margin-top: 10px;
+  }
+  
+  /* Add Candidate Form */
+  .add-candidate {
+    margin-top: 18px;
     display: flex;
+    flex-direction: column;
     gap: 10px;
-}
-
-.add-candidate input {
-    flex-grow: 1;
-}
-
-.add-candidate button {
+  }
+  
+  .add-candidate input,
+  .add-candidate textarea {
+    background: #2b2b2b;
+  }
+  
+  .add-candidate button {
+    align-self: flex-start;
     background-color: #007bff;
     color: white;
     border: none;
-    padding: 8px 12px;
+    padding: 10px 16px;
+    border-radius: 6px;
     cursor: pointer;
-    border-radius: 4px;
-}
-
-.add-candidate button:hover {
+    font-weight: 600;
+  }
+  
+  .add-candidate button:hover {
     background-color: #0056b3;
-}
-
-/* Submit Button */
-.submit-btn {
-    margin-top: 15px;
+  }
+  
+  /* Submit Button */
+  .submit-btn {
+    margin-top: 24px;
     width: 100%;
     background-color: #28a745;
     color: white;
-    padding: 10px;
+    padding: 12px;
+    font-size: 16px;
+    font-weight: bold;
     border: none;
     cursor: pointer;
-    border-radius: 4px;
-}
-
-.submit-btn:hover {
+    border-radius: 6px;
+    transition: background-color 0.3s ease;
+  }
+  
+  .submit-btn:hover {
     background-color: #218838;
-}
+  }
+
+  /* Wrapper centers everything */
+/* .page-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 40px;
+    /* margin: auto; */
+  /* }  */
+  
+  /* Top navigation buttons as tabs */
+  .dashboard-tabs {
+    display: flex;
+    justify-content: center; 
+    gap: 12px;
+    margin: 24px auto;        
+    max-width: 720px;
+  }
+  
+  
+  .dashboard-tabs button {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    background-color: #2b2b2b;
+    color: #ccc;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  .dashboard-tabs button.active {
+    background-color: #111;
+    color: #fff;
+  }
+  
+  .dashboard-tabs button:hover {
+    background-color: #333;
+  }
+  
+  /* Content area centered below tabs */
+  /* .content {
+    width: 100%;
+    max-width: 720px;
+    background: #1f1f1f;
+    padding: 32px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    color: #fff;
+  } */
+  
+  

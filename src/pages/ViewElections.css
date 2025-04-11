@@ -40,6 +40,15 @@
     margin: 6px 0;
     color: #ccc;
   }
+
+  .candidate-image {
+    width: 100%;
+    max-width: 150px;
+    height: auto;
+    border-radius: 8px;
+    margin-bottom: 8px;
+  }
+  
   
   .view-btn {
     margin-top: 16px;
