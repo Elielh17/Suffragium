@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import "./ViewElections.css";
 
@@ -9,6 +10,7 @@ const ViewElection = () => {
   const [userId, setUserId] = useState(null);
   const [votedElections, setVotedElections] = useState([]);
   const [joinedElections, setJoinedElections] = useState([]);
+  const location = useLocation();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -22,9 +24,20 @@ const ViewElection = () => {
         await fetchUserJoins(session.user.id);
       }
 
-      const { data, error } = await supabase
+      const params = new URLSearchParams(location.search);
+      const accessToken = params.get("token");
+
+      let query = supabase
         .from("election")
         .select(`*, candidates(*, votes(*))`);
+
+        if (accessToken) {
+          query = query.eq("access_token", accessToken).eq("visibility", false);
+        } else {
+          query = query.eq("visibility", true);
+        }        
+
+      const { data, error } = await query;
 
       if (error) {
         console.error("Error fetching elections:", error);
@@ -77,7 +90,7 @@ const ViewElection = () => {
     };
 
     fetchData();
-  }, []);
+  }, [location.search]);
 
   const handleJoin = async (electionId) => {
     if (!userId) return;

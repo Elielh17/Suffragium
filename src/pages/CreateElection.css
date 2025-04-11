@@ -220,6 +220,31 @@
   .dashboard-tabs button:hover {
     background-color: #333;
   }
+
+  .shareable-link-box {
+    margin-top: 24px;
+    background-color: #2b2b2b;
+    padding: 16px;
+    border-radius: 8px;
+    color: #fff;
+  }
+  
+  .shareable-link-box input {
+    width: 100%;
+    padding: 10px;
+    background: #1f1f1f;
+    border: 1px solid #444;
+    color: #00eaff;
+    font-family: monospace;
+    border-radius: 4px;
+  }
+  
+  .shareable-note {
+    font-size: 14px;
+    color: #aaa;
+    margin-top: 6px;
+  }
+  
   
   /* Content area centered below tabs */
   /* .content {

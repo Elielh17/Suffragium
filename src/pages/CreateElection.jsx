@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import "./CreateElection.css";
+import { v4 as uuidv4 } from "uuid";
 import { supabase } from "../supabaseClient";
+import "./CreateElection.css";
 
 const MAX_FILE_SIZE_MB = 2; // Max file size in megabytes
 
@@ -14,10 +15,14 @@ const CreateElection = () => {
   const [typeCode, setTypeCode] = useState(1);
   const [hasPassword, setHasPassword] = useState(false);
   const [electionPassword, setElectionPassword] = useState("");
+  const [visibility, setVisibility] = useState("public");
   const [candidates, setCandidates] = useState([]);
   const [newCandidate, setNewCandidate] = useState("");
   const [newCandidateDescription, setNewCandidateDescription] = useState("");
   const [newCandidateImage, setNewCandidateImage] = useState(null);
+  const [shareMessage, setShareMessage] = useState(null);
+  const [shareableLink, setShareableLink] = useState("");
+  const [showPopup, setShowPopup] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -65,13 +70,13 @@ const CreateElection = () => {
       let imageUrl = null;
       if (newCandidateImage) {
         imageUrl = await uploadImage(newCandidateImage);
-        if (!imageUrl) return; // Stop if upload failed or too large
+        if (!imageUrl) return;
       }
 
       setCandidates([...candidates, {
         name: newCandidate,
-        description: newCandidateDescription,
-        image_url: imageUrl
+        description: newCandidateDescription?.trim() || null,
+        image_url: imageUrl || null
       }]);
 
       setNewCandidate("");
@@ -94,6 +99,8 @@ const CreateElection = () => {
 
     const formattedStartDate = startDate.split("T")[0];
     const formattedEndDate = endDate.split("T")[0];
+    const isPrivate = visibility === "private";
+    const accessToken = isPrivate ? uuidv4() : null;
 
     const electionData = {
       electionname: electionName,
@@ -103,6 +110,8 @@ const CreateElection = () => {
       statuscode: 1,
       typecode: typeCode,
       permittedrolecodes: [],
+      visibility: visibility === "public",
+      access_token: accessToken,
     };
 
     const { data, error } = await supabase.from("election").insert([electionData]).select();
@@ -117,7 +126,7 @@ const CreateElection = () => {
     const candidateInserts = candidates.map((c) => ({
       electionid: electionId,
       name: c.name,
-      description: c.description || "",
+      description: c.description || null,
       image: c.image_url || null
     }));
 
@@ -129,7 +138,15 @@ const CreateElection = () => {
       return;
     }
 
-    alert("Election and candidates created successfully!");
+    if (isPrivate) {
+      const shareURL = `${window.location.origin}/view-elections?token=${accessToken}`;
+      setShareableLink(shareURL);
+      setShareMessage("Election and candidates created successfully!");
+    } else {
+      setShareMessage("Election and candidates created successfully!");
+    }
+
+    setShowPopup(true);
   };
 
   return (
@@ -146,7 +163,7 @@ const CreateElection = () => {
             {activeTab === "election" && (
               <div className="form-section">
                 <label>Election Name:</label>
-                <input type="text" value={electionName} onChange={(e) => setElectionName(e.target.value)} required />
+                <input type="text" value={electionName} onChange={(e) => setElectionName(e.target.value)} maxLength={20} required />
 
                 <label>Election Description:</label>
                 <textarea value={electionDescription} onChange={(e) => setElectionDescription(e.target.value)} rows="4" required />
@@ -162,6 +179,12 @@ const CreateElection = () => {
                   <option value={1}>Normal</option>
                   <option value={2}>Weighted</option>
                   <option value={3}>Placeholder</option>
+                </select>
+
+                <label>Visibility:</label>
+                <select value={visibility} onChange={(e) => setVisibility(e.target.value)}>
+                  <option value="public">Public</option>
+                  <option value="private">Private (Shareable Link)</option>
                 </select>
 
                 <div className="password-toggle">
@@ -228,6 +251,20 @@ const CreateElection = () => {
 
             <button type="submit" className="submit-btn">Create Election</button>
           </form>
+
+          {showPopup && shareMessage && (
+            <div className="popup-message">
+              <p>{shareMessage}</p>
+              {shareableLink && (
+                <div className="shareable-link-box">
+                  <p><strong>Private Election Link:</strong></p>
+                  <input type="text" value={shareableLink} readOnly onClick={(e) => e.target.select()} />
+                  <p className="shareable-note">Share this with participants to let them access the election.</p>
+                </div>
+              )}
+              <button onClick={() => setShowPopup(false)}>Close</button>
+            </div>
+          )}
         </main>
       </div>
     </div>
