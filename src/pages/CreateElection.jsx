@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 import { supabase } from "../supabaseClient";
 import "./CreateElection.css";
 
-const MAX_FILE_SIZE_MB = 2; // Max file size in megabytes
+const MAX_FILE_SIZE_MB = 2;
 
 const CreateElection = () => {
   const [activeTab, setActiveTab] = useState("election");
@@ -20,6 +20,9 @@ const CreateElection = () => {
   const [newCandidate, setNewCandidate] = useState("");
   const [newCandidateDescription, setNewCandidateDescription] = useState("");
   const [newCandidateImage, setNewCandidateImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [roles, setRoles] = useState([]);
+  const [newRole, setNewRole] = useState({ description: "", voteweight: 1 });
   const [shareMessage, setShareMessage] = useState(null);
   const [shareableLink, setShareableLink] = useState("");
   const [showPopup, setShowPopup] = useState(false);
@@ -31,21 +34,8 @@ const CreateElection = () => {
         data: { session },
         error,
       } = await supabase.auth.getSession();
-
-      if (error) {
-        console.error("Error retrieving session:", error);
-      }
-
-      if (session) {
-        console.log("✅ Session is valid!");
-        console.log("User ID:", session.user.id);
-        console.log("Email:", session.user.email);
-      } else {
-        console.warn("❌ No active session. Redirecting to login...");
-        navigate("/login");
-      }
+      if (!session) navigate("/login");
     };
-
     checkSession();
   }, [navigate]);
 
@@ -54,35 +44,35 @@ const CreateElection = () => {
       alert(`Image exceeds ${MAX_FILE_SIZE_MB}MB size limit.`);
       return null;
     }
-
     const fileName = `${Date.now()}-${file.name}`;
     const { data, error } = await supabase.storage.from("candidate-pictures").upload(fileName, file);
-    if (error) {
-      console.error("Image upload error:", error);
-      return null;
-    }
-    const url = supabase.storage.from("candidate-pictures").getPublicUrl(fileName).data.publicUrl;
-    return url;
+    if (error) return null;
+    return supabase.storage.from("candidate-pictures").getPublicUrl(fileName).data.publicUrl;
   };
 
   const addCandidate = async () => {
-    if (newCandidate.trim() !== "") {
-      let imageUrl = null;
-      if (newCandidateImage) {
-        imageUrl = await uploadImage(newCandidateImage);
-        if (!imageUrl) return;
-      }
-
-      setCandidates([...candidates, {
-        name: newCandidate,
-        description: newCandidateDescription?.trim() || null,
-        image_url: imageUrl || null
-      }]);
-
-      setNewCandidate("");
-      setNewCandidateDescription("");
-      setNewCandidateImage(null);
+    if (!newCandidate.trim()) return;
+    let imageUrl = null;
+    if (newCandidateImage) {
+      imageUrl = await uploadImage(newCandidateImage);
+      if (!imageUrl) return;
     }
+    setCandidates([...candidates, {
+      name: newCandidate,
+      description: newCandidateDescription.trim() || null,
+      image_url: imageUrl || null
+    }]);
+    setNewCandidate("");
+    setNewCandidateDescription("");
+    setNewCandidateImage(null);
+    setImagePreview(null);
+  };
+
+  const addRole = () => {
+    if (!newRole.description.trim()) return;
+    const newRoleWithId = { ...newRole, id: roles.length + 1 };
+    setRoles([...roles, newRoleWithId]);
+    setNewRole({ description: "", voteweight: 1 });
   };
 
   const removeCandidate = (index) => {
@@ -91,17 +81,14 @@ const CreateElection = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (candidates.length < 2) {
       alert("Please add at least two candidates to create an election.");
       return;
     }
-
     const formattedStartDate = startDate.split("T")[0];
     const formattedEndDate = endDate.split("T")[0];
     const isPrivate = visibility === "private";
     const accessToken = isPrivate ? uuidv4() : null;
-
     const electionData = {
       electionname: electionName,
       description: electionDescription,
@@ -113,49 +100,41 @@ const CreateElection = () => {
       visibility: visibility === "public",
       access_token: accessToken,
     };
-
     const { data, error } = await supabase.from("election").insert([electionData]).select();
-
-    if (error || !data || data.length === 0) {
-      console.error("Election creation failed:", error);
-      alert("Failed to create the election.");
-      return;
-    }
-
+    if (error || !data?.length) return alert("Failed to create the election.");
     const electionId = data[0].electionid;
-    const candidateInserts = candidates.map((c) => ({
-      electionid: electionId,
-      name: c.name,
-      description: c.description || null,
-      image: c.image_url || null
-    }));
 
-    const { error: candidateError } = await supabase.from("candidates").insert(candidateInserts);
+    await supabase.from("candidates").insert(
+      candidates.map((c) => ({
+        electionid: electionId,
+        name: c.name,
+        description: c.description || null,
+        image: c.image_url || null
+      }))
+    );
 
-    if (candidateError) {
-      console.error("Candidate insertion failed:", candidateError);
-      alert("Election was created but candidates couldn't be added.");
-      return;
-    }
+    await supabase.from("roles").insert(
+      roles.map((r) => ({
+        description: r.description,
+        voteweight: parseFloat(r.voteweight),
+        electionid: electionId,
+      }))
+    );
 
-    if (isPrivate) {
-      const shareURL = `${window.location.origin}/view-elections?token=${accessToken}`;
-      setShareableLink(shareURL);
-      setShareMessage("Election and candidates created successfully!");
-    } else {
-      setShareMessage("Election and candidates created successfully!");
-    }
-
+    const url = `${window.location.origin}/view-elections?token=${accessToken}`;
+    setShareableLink(url);
+    setShareMessage("Election and candidates created successfully!");
     setShowPopup(true);
   };
 
   return (
     <div className="page-wrapper">
       <div className="create-election-wrapper">
-        <h2 className="">Create New Election</h2>
+        <h2>Create New Election</h2>
         <div className="dashboard-tabs">
           <button onClick={() => setActiveTab("election")} className={activeTab === "election" ? "active" : ""}>🗳️ Election Info</button>
           <button onClick={() => setActiveTab("candidates")} className={activeTab === "candidates" ? "active" : ""}>👤 Candidates</button>
+          <button onClick={() => setActiveTab("roles")} className={activeTab === "roles" ? "active" : ""}>📊 Roles</button>
         </div>
 
         <main className="content">
@@ -164,50 +143,33 @@ const CreateElection = () => {
               <div className="form-section">
                 <label>Election Name:</label>
                 <input type="text" value={electionName} onChange={(e) => setElectionName(e.target.value)} maxLength={20} required />
-
                 <label>Election Description:</label>
                 <textarea value={electionDescription} onChange={(e) => setElectionDescription(e.target.value)} rows="4" required />
-
                 <label>Start Date:</label>
                 <input type="datetime-local" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
-
                 <label>End Date:</label>
                 <input type="datetime-local" value={endDate} onChange={(e) => setEndDate(e.target.value)} required />
-
                 <label>Election Type:</label>
                 <select value={typeCode} onChange={(e) => setTypeCode(parseInt(e.target.value))}>
                   <option value={1}>Normal</option>
                   <option value={2}>Weighted</option>
                   <option value={3}>Placeholder</option>
                 </select>
-
                 <label>Visibility:</label>
                 <select value={visibility} onChange={(e) => setVisibility(e.target.value)}>
                   <option value="public">Public</option>
                   <option value="private">Private (Shareable Link)</option>
                 </select>
-
                 <div className="password-toggle">
                   <label>
                     Add Password to Election
-                    <input
-                      type="checkbox"
-                      checked={hasPassword}
-                      onChange={(e) => setHasPassword(e.target.checked)}
-                      style={{ marginLeft: "12px", transform: "scale(1.5)" }}
-                    />
+                    <input type="checkbox" checked={hasPassword} onChange={(e) => setHasPassword(e.target.checked)} style={{ marginLeft: "12px", transform: "scale(1.5)" }} />
                   </label>
                 </div>
-
                 {hasPassword && (
                   <div className="password-input">
                     <label>Password:</label>
-                    <input
-                      type="password"
-                      value={electionPassword}
-                      onChange={(e) => setElectionPassword(e.target.value)}
-                      placeholder="Enter election password"
-                    />
+                    <input type="password" value={electionPassword} onChange={(e) => setElectionPassword(e.target.value)} placeholder="Enter election password" />
                   </div>
                 )}
               </div>
@@ -225,26 +187,29 @@ const CreateElection = () => {
                     </div>
                   ))}
                 </div>
-
                 <div className="add-candidate">
-                  <input
-                    type="text"
-                    value={newCandidate}
-                    onChange={(e) => setNewCandidate(e.target.value)}
-                    placeholder="Enter candidate name"
-                  />
-                  <textarea
-                    value={newCandidateDescription}
-                    onChange={(e) => setNewCandidateDescription(e.target.value)}
-                    rows="4"
-                    placeholder="Enter candidate description"
-                  ></textarea>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setNewCandidateImage(e.target.files[0])}
-                  />
+                  <input type="text" value={newCandidate} onChange={(e) => setNewCandidate(e.target.value)} placeholder="Enter candidate name" />
+                  <textarea value={newCandidateDescription} onChange={(e) => setNewCandidateDescription(e.target.value)} rows="4" placeholder="Enter candidate description"></textarea>
+                  <input type="file" accept="image/*" onChange={(e) => {
+                    setNewCandidateImage(e.target.files[0]);
+                    setImagePreview(URL.createObjectURL(e.target.files[0]));
+                  }} />
+                  {imagePreview && <img src={imagePreview} alt="Preview" style={{ maxHeight: 150, marginTop: 8 }} />}
                   <button type="button" onClick={addCandidate}>Add Candidate</button>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "roles" && (
+              <div className="form-section">
+                <label>Add Role:</label>
+                <input type="text" value={newRole.description} onChange={(e) => setNewRole({ ...newRole, description: e.target.value })} placeholder="Role Description" />
+                <input type="number" step="0.1" value={isNaN(newRole.voteweight) ? '' : newRole.voteweight} onChange={(e) => setNewRole({ ...newRole, voteweight: parseFloat(e.target.value) || 0 })} placeholder="Vote Weight" />
+                <button type="button" onClick={addRole}>Add Role</button>
+                <div className="candidate-list">
+                  {roles.map((r, i) => (
+                    <p key={i}><strong>{r.description}</strong> - Weight: {r.voteweight}</p>
+                  ))}
                 </div>
               </div>
             )}

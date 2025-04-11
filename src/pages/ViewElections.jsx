@@ -31,38 +31,60 @@ const ViewElection = () => {
         .from("election")
         .select(`*, candidates(*, votes(*))`);
 
-        if (accessToken) {
-          query = query.eq("access_token", accessToken).eq("visibility", false);
-        } else {
-          query = query.eq("visibility", true);
-        }        
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error("Error fetching elections:", error);
+      if (accessToken) {
+        query = query.eq("access_token", accessToken).eq("visibility", false);
       } else {
-        const processedElections = data.map((election) => {
-          const candidates = election.candidates.map((candidate) => {
-            const voteCount = candidate.votes ? candidate.votes.length : 0;
-            return {
-              ...candidate,
-              voteCount,
-            };
-          });
+        query = query.eq("visibility", true);
+      }
 
-          const sortedCandidates = [...candidates].sort((a, b) => b.voteCount - a.voteCount);
+      const { data: electionsData, error } = await query;
+      if (error) return console.error("Error fetching elections:", error);
+
+      const electionIds = electionsData.map((e) => e.electionid);
+
+      const { data: userRefs } = await supabase
+        .from("userreference")
+        .select("userid, rolecode, electionid")
+        .in("electionid", electionIds);
+
+      const { data: rolesData } = await supabase
+        .from("roles")
+        .select("id, voteweight, electionid");
+
+      const userRoleMap = {};
+      userRefs?.forEach((u) => {
+        userRoleMap[u.userid + "_" + u.electionid] = u.rolecode;
+      });
+
+      const roleWeightMap = {};
+      rolesData?.forEach((r) => {
+        roleWeightMap[r.id + "_" + r.electionid] = r.voteweight;
+      });
+
+      const processedElections = electionsData.map((election) => {
+        const candidates = election.candidates.map((candidate) => {
+          const voteCount = candidate.votes?.reduce((sum, vote) => {
+            const rolecode = userRoleMap[vote.userid + "_" + election.electionid];
+            const weight = roleWeightMap[rolecode + "_" + election.electionid] || 1;
+            return sum + weight;
+          }, 0);
 
           return {
-            ...election,
-            candidates: sortedCandidates,
-            winner: sortedCandidates[0] || null,
+            ...candidate,
+            voteCount,
           };
         });
 
-        setElections(processedElections);
-      }
+        const sortedCandidates = [...candidates].sort((a, b) => b.voteCount - a.voteCount);
 
+        return {
+          ...election,
+          candidates: sortedCandidates,
+          winner: sortedCandidates[0] || null,
+        };
+      });
+
+      setElections(processedElections);
       setLoading(false);
     };
 
@@ -124,9 +146,28 @@ const ViewElection = () => {
   const handleVote = async (candidateId, electionId) => {
     if (!userId) return;
 
+    // Fetch rolecode and weight
+    const { data: userRef } = await supabase
+      .from("userreference")
+      .select("rolecode")
+      .eq("userid", userId)
+      .eq("electionid", electionId)
+      .maybeSingle();
+
+    const rolecode = userRef?.rolecode;
+
+    const { data: role } = await supabase
+      .from("roles")
+      .select("voteweight")
+      .eq("id", rolecode)
+      .eq("electionid", electionId)
+      .maybeSingle();
+
+    const weight = role?.voteweight || 1;
+
     const { error } = await supabase
       .from("votes")
-      .update({ candidateid: candidateId })
+      .update({ candidateid: candidateId, weight })
       .match({ userid: userId, electionid: electionId });
 
     if (!error) {
