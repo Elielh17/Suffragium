@@ -8,6 +8,7 @@ const ViewElection = () => {
   const [selectedElection, setSelectedElection] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState(null);
+  const [userEmail, setUserEmail] = useState(null);
   const [votedElections, setVotedElections] = useState([]);
   const [joinedElections, setJoinedElections] = useState([]);
   const location = useLocation();
@@ -18,8 +19,9 @@ const ViewElection = () => {
         data: { session },
       } = await supabase.auth.getSession();
 
-      if (session) {
+      if (session?.user) {
         setUserId(session.user.id);
+        setUserEmail(session.user.email);
         await fetchUserVotes(session.user.id);
         await fetchUserJoins(session.user.id);
       }
@@ -41,31 +43,31 @@ const ViewElection = () => {
       if (error) return console.error("Error fetching elections:", error);
 
       const electionIds = electionsData.map((e) => e.electionid);
+      const validElectionIds = electionIds.filter(id => typeof id === "string" || typeof id === "number");
 
-      const { data: userRefs } = await supabase
-        .from("userreference")
-        .select("userid, rolecode, electionid")
-        .in("electionid", electionIds);
+      const { data: roleAssignments, error: roleError } = await supabase
+        .from("user_role")
+        .select("email, weight, electionid")
+        .in("electionid", validElectionIds);
 
-      const { data: rolesData } = await supabase
-        .from("roles")
-        .select("id, voteweight, electionid");
+      if (roleError || !roleAssignments) {
+        console.error("Failed to fetch user roles:", roleError);
+        return;
+      }
 
-      const userRoleMap = {};
-      userRefs?.forEach((u) => {
-        userRoleMap[u.userid + "_" + u.electionid] = u.rolecode;
-      });
-
-      const roleWeightMap = {};
-      rolesData?.forEach((r) => {
-        roleWeightMap[r.id + "_" + r.electionid] = r.voteweight;
-      });
+      const emailWeightMap = {};
+      for (const r of roleAssignments) {
+        emailWeightMap[`${r.electionid}|${r.email}`] = r.weight;
+      }
 
       const processedElections = electionsData.map((election) => {
         const candidates = election.candidates.map((candidate) => {
           const voteCount = candidate.votes?.reduce((sum, vote) => {
-            const rolecode = userRoleMap[vote.userid + "_" + election.electionid];
-            const weight = roleWeightMap[rolecode + "_" + election.electionid] || 1;
+            let weight = 1;
+            if (election.typecode === 2 && vote.email) {
+              const key = `${election.electionid}|${vote.email}`;
+              weight = emailWeightMap[key] || 1;
+            }
             return sum + weight;
           }, 0);
 
@@ -146,33 +148,41 @@ const ViewElection = () => {
   const handleVote = async (candidateId, electionId) => {
     if (!userId) return;
 
-    // Fetch rolecode and weight
-    const { data: userRef } = await supabase
-      .from("userreference")
-      .select("rolecode")
-      .eq("userid", userId)
+    // Get election type
+    const { data: electionData, error: electionError } = await supabase
+      .from("election")
+      .select("typecode")
       .eq("electionid", electionId)
-      .maybeSingle();
+      .single();
 
-    const rolecode = userRef?.rolecode;
+    if (electionError || !electionData) {
+      alert("Failed to fetch election type.");
+      return;
+    }
 
-    const { data: role } = await supabase
-      .from("roles")
-      .select("voteweight")
-      .eq("id", rolecode)
-      .eq("electionid", electionId)
-      .maybeSingle();
+    let weight = 1;
 
-    const weight = role?.voteweight || 1;
+    if (electionData.typecode === 2 && userEmail) {
+      const { data: role } = await supabase
+        .from("user_role")
+        .select("weight")
+        .eq("email", userEmail)
+        .eq("electionid", electionId)
+        .maybeSingle();
+
+      weight = role?.weight || 1;
+    }
 
     const { error } = await supabase
       .from("votes")
-      .update({ candidateid: candidateId, weight })
+      .update({ candidateid: candidateId, weight, email: userEmail })
       .match({ userid: userId, electionid: electionId });
 
     if (!error) {
       setVotedElections([...votedElections, electionId]);
-      alert("Vote cast successfully!");
+      alert(`Vote cast successfully with weight ${weight}!`);
+    } else {
+      alert("Failed to cast vote.");
     }
   };
 
