@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { HashRouter as Router, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Home from "./pages/Home"; 
 import CreateElection from "./pages/CreateElection";
@@ -8,7 +8,7 @@ import Login from "./pages/Login";
 import ViewElections from "./pages/ViewElections";
 import JoinElection from "./pages/JoinElection";
 
-const API_URL = "http://localhost:3000";
+//const API_URL = "http://localhost:5000";
 
 function App() {
     const [votes, setVotes] = useState({ candidateA: 0, candidateB: 0 });
