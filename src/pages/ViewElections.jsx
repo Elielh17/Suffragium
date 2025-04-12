@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import "./ViewElections.css";
 
@@ -7,8 +8,10 @@ const ViewElection = () => {
   const [selectedElection, setSelectedElection] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState(null);
+  const [userEmail, setUserEmail] = useState(null);
   const [votedElections, setVotedElections] = useState([]);
   const [joinedElections, setJoinedElections] = useState([]);
+  const location = useLocation();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -16,40 +19,74 @@ const ViewElection = () => {
         data: { session },
       } = await supabase.auth.getSession();
 
-      if (session) {
+      if (session?.user) {
         setUserId(session.user.id);
+        setUserEmail(session.user.email);
         await fetchUserVotes(session.user.id);
         await fetchUserJoins(session.user.id);
       }
 
-      const { data, error } = await supabase
+      const params = new URLSearchParams(location.search);
+      const accessToken = params.get("token");
+
+      let query = supabase
         .from("election")
         .select(`*, candidates(*, votes(*))`);
 
-      if (error) {
-        console.error("Error fetching elections:", error);
+      if (accessToken) {
+        query = query.eq("access_token", accessToken).eq("visibility", false);
       } else {
-        const processedElections = data.map((election) => {
-          const candidates = election.candidates.map((candidate) => {
-            const voteCount = candidate.votes ? candidate.votes.length : 0;
-            return {
-              ...candidate,
-              voteCount,
-            };
-          });
+        query = query.eq("visibility", true);
+      }
 
-          const sortedCandidates = [...candidates].sort((a, b) => b.voteCount - a.voteCount);
+      const { data: electionsData, error } = await query;
+      if (error) return console.error("Error fetching elections:", error);
+
+      const electionIds = electionsData.map((e) => e.electionid);
+      const validElectionIds = electionIds.filter(id => typeof id === "string" || typeof id === "number");
+
+      const { data: roleAssignments, error: roleError } = await supabase
+        .from("user_role")
+        .select("email, weight, electionid")
+        .in("electionid", validElectionIds);
+
+      if (roleError || !roleAssignments) {
+        console.error("Failed to fetch user roles:", roleError);
+        return;
+      }
+
+      const emailWeightMap = {};
+      for (const r of roleAssignments) {
+        emailWeightMap[`${r.electionid}|${r.email}`] = r.weight;
+      }
+
+      const processedElections = electionsData.map((election) => {
+        const candidates = election.candidates.map((candidate) => {
+          const voteCount = candidate.votes?.reduce((sum, vote) => {
+            let weight = 1;
+            if (election.typecode === 2 && vote.email) {
+              const key = `${election.electionid}|${vote.email}`;
+              weight = emailWeightMap[key] || 1;
+            }
+            return sum + weight;
+          }, 0);
 
           return {
-            ...election,
-            candidates: sortedCandidates,
-            winner: sortedCandidates[0] || null,
+            ...candidate,
+            voteCount,
           };
         });
 
-        setElections(processedElections);
-      }
+        const sortedCandidates = [...candidates].sort((a, b) => b.voteCount - a.voteCount);
 
+        return {
+          ...election,
+          candidates: sortedCandidates,
+          winner: sortedCandidates[0] || null,
+        };
+      });
+
+      setElections(processedElections);
       setLoading(false);
     };
 
@@ -77,12 +114,11 @@ const ViewElection = () => {
     };
 
     fetchData();
-  }, []);
+  }, [location.search]);
 
   const handleJoin = async (electionId) => {
     if (!userId) return;
 
-    // Check if already joined
     const { data: existingVote } = await supabase
       .from("votes")
       .select("*")
@@ -96,13 +132,12 @@ const ViewElection = () => {
     }
 
     const { error } = await supabase.from("votes").insert([
-        {
-          userid: userId,
-          electionid: electionId,
-          candidateid: null,
-        },
-      ]);
-      
+      {
+        userid: userId,
+        electionid: electionId,
+        candidateid: null,
+      },
+    ]);
 
     if (!error) {
       setJoinedElections([...joinedElections, electionId]);
@@ -113,14 +148,41 @@ const ViewElection = () => {
   const handleVote = async (candidateId, electionId) => {
     if (!userId) return;
 
+    // Get election type
+    const { data: electionData, error: electionError } = await supabase
+      .from("election")
+      .select("typecode")
+      .eq("electionid", electionId)
+      .single();
+
+    if (electionError || !electionData) {
+      alert("Failed to fetch election type.");
+      return;
+    }
+
+    let weight = 1;
+
+    if (electionData.typecode === 2 && userEmail) {
+      const { data: role } = await supabase
+        .from("user_role")
+        .select("weight")
+        .eq("email", userEmail)
+        .eq("electionid", electionId)
+        .maybeSingle();
+
+      weight = role?.weight || 1;
+    }
+
     const { error } = await supabase
       .from("votes")
-      .update({ candidateid: candidateId })
+      .update({ candidateid: candidateId, weight, email: userEmail })
       .match({ userid: userId, electionid: electionId });
 
     if (!error) {
       setVotedElections([...votedElections, electionId]);
-      alert("Vote cast successfully!");
+      alert(`Vote cast successfully with weight ${weight}!`);
+    } else {
+      alert("Failed to cast vote.");
     }
   };
 
@@ -149,6 +211,9 @@ const ViewElection = () => {
             <div className="candidate-grid">
               {selectedElection.candidates.map((c) => (
                 <div key={c.id} className="candidate-card">
+                  {c.image && (
+                    <img src={c.image} alt={c.name} className="candidate-image" />
+                  )}
                   <p><strong>{c.name}</strong></p>
                   <p>{c.description || "No description available."}</p>
                   <p className="votes">Votes: {c.voteCount}</p>
