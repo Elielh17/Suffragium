@@ -1,0 +1,40 @@
+.voting-log {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background-color: transparent;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  .voting-log h4 {
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+    font-weight: bold;
+  }
+  
+  .voting-log table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color:  transparent;
+  }
+  
+  .voting-log th,
+  .voting-log td {
+    border: 1px solid #ddd;
+    padding: 0.75rem;
+    text-align: left;
+  }
+  
+  .voting-log th {
+    background-color: transparent;
+    font-weight: bold;
+  }
+  
+  .voting-log tr:nth-child(even) {
+    background-color: transparent;
+  }
+  
+  .voting-log-container {
+    margin-top: 1rem;
+  }
+  

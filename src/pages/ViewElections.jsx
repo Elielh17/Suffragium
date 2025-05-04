@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import "./ViewElections.css";
+import VoteLog from "./VoteLog.jsx";
 
 const ViewElection = () => {
   const [elections, setElections] = useState([]);
@@ -11,6 +12,7 @@ const ViewElection = () => {
   const [userEmail, setUserEmail] = useState(null);
   const [votedElections, setVotedElections] = useState([]);
   const [joinedElections, setJoinedElections] = useState([]);
+  const [showLog, setShowLog] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
@@ -30,7 +32,7 @@ const ViewElection = () => {
       const accessToken = params.get("token");
 
       let query = supabase
-        .from("election")
+        .from("filteredelectionbydate")
         .select(`*, candidates(*, votes(*))`);
 
       if (accessToken) {
@@ -60,12 +62,12 @@ const ViewElection = () => {
         emailWeightMap[`${r.electionid}|${r.email}`] = r.weight;
       }
 
-      const processedElections = electionsData.map((election) => {
-        const candidates = election.candidates.map((candidate) => {
+      const processedElections = electionsData.map((filteredelectionbydate) => {
+        const candidates = filteredelectionbydate.candidates.map((candidate) => {
           const voteCount = candidate.votes?.reduce((sum, vote) => {
             let weight = 1;
-            if (election.typecode === 2 && vote.email) {
-              const key = `${election.electionid}|${vote.email}`;
+            if (filteredelectionbydate.typecode === 2 && vote.email) {
+              const key = `${filteredelectionbydate.electionid}|${vote.email}`;
               weight = emailWeightMap[key] || 1;
             }
             return sum + weight;
@@ -80,7 +82,7 @@ const ViewElection = () => {
         const sortedCandidates = [...candidates].sort((a, b) => b.voteCount - a.voteCount);
 
         return {
-          ...election,
+          ...filteredelectionbydate,
           candidates: sortedCandidates,
           winner: sortedCandidates[0] || null,
         };
@@ -234,11 +236,21 @@ const ViewElection = () => {
             </button>
           )}
 
-          {selectedElection.winner && (
-            <div className="winner-box">
-              🏆 <strong>Currently Leading:</strong> {selectedElection.winner.name} with {selectedElection.winner.voteCount} vote(s)
-            </div>
-          )}
+{selectedElection.winner && (
+  <div className="winner-box">
+    🏆 <strong>Currently Leading:</strong> {selectedElection.winner.name} with {selectedElection.winner.voteCount} vote(s)
+  </div>
+)}
+
+<button className="view-btn" onClick={() => setShowLog(!showLog)}>
+  {showLog ? "Hide Voting Log" : "View Voting Log"}
+</button>
+
+{showLog && (
+  <div className="voting-log-container">
+    <VoteLog electionId={selectedElection.electionid} />
+  </div>
+)}
         </div>
       </div>
     );
@@ -247,18 +259,18 @@ const ViewElection = () => {
   return (
     <div className="election-list-container">
       <h2>Available Elections</h2>
-      {elections.map((election) => (
-        <div key={election.electionid} className="election-card">
-          <h3>{election.electionname}</h3>
-          <p>{election.description}</p>
+      {elections.map((filteredelectionbydate) => (
+        <div key={filteredelectionbydate.electionid} className="election-card">
+          <h3>{filteredelectionbydate.electionname}</h3>
+          <p>{filteredelectionbydate.description}</p>
           <p>
-            Dates: {election.startdate} to {election.enddate}
+            Dates: {filteredelectionbydate.startdate} to {filteredelectionbydate.enddate}
           </p>
 
           <div className="candidate-box">
             <h4>Candidates</h4>
             <ul>
-              {election.candidates.map((c) => (
+              {filteredelectionbydate.candidates.map((c) => (
                 <li key={c.id}>
                   {c.name} - {c.voteCount} vote(s)
                 </li>
@@ -266,13 +278,13 @@ const ViewElection = () => {
             </ul>
           </div>
 
-          {election.winner && (
+          {filteredelectionbydate.winner && (
             <div className="winner-box">
-              <strong>Leading:</strong> {election.winner.name} with {election.winner.voteCount} vote(s)
+              <strong>Leading:</strong> {filteredelectionbydate.winner.name} with {filteredelectionbydate.winner.voteCount} vote(s)
             </div>
           )}
 
-          <button className="view-btn" onClick={() => setSelectedElection(election)}>
+          <button className="view-btn" onClick={() => setSelectedElection(filteredelectionbydate)}>
             View Details
           </button>
         </div>
