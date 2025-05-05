@@ -127,7 +127,9 @@ const CreateElection = () => {
       });
     }));
 
-    const url = `${window.location.origin}/view-elections?token=${accessToken}`;
+    const url = isPrivate
+    ? `${window.location.origin}/Suffragium/#/view-elections?token=${accessToken}`
+    : `${window.location.origin}/Suffragium/#/view-elections`;
     setShareableLink(url);
     setShareMessage("Election and candidates created successfully!");
     setShowPopup(true);
