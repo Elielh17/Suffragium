@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import "./ViewElections.css";
 import VoteLog from "./VoteLog.jsx";
@@ -14,6 +14,7 @@ const ViewElection = () => {
   const [joinedElections, setJoinedElections] = useState([]);
   const [showLog, setShowLog] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -30,6 +31,7 @@ const ViewElection = () => {
 
       const params = new URLSearchParams(location.search);
       const accessToken = params.get("token");
+      const electionIdParam = params.get("id");
 
       let query = supabase
         .from("filteredelectionbydate")
@@ -37,6 +39,8 @@ const ViewElection = () => {
 
       if (accessToken) {
         query = query.eq("access_token", accessToken).eq("visibility", false);
+      } else if (electionIdParam) {
+        query = query.eq("electionid", electionIdParam);
       } else {
         query = query.eq("visibility", true);
       }
@@ -89,6 +93,9 @@ const ViewElection = () => {
       });
 
       setElections(processedElections);
+      if (processedElections.length === 1 && (accessToken || electionIdParam)) {
+        setSelectedElection(processedElections[0]);
+      }
       setLoading(false);
     };
 
@@ -150,7 +157,6 @@ const ViewElection = () => {
   const handleVote = async (candidateId, electionId) => {
     if (!userId) return;
 
-    // Get election type
     const { data: electionData, error: electionError } = await supabase
       .from("election")
       .select("typecode")
@@ -236,21 +242,21 @@ const ViewElection = () => {
             </button>
           )}
 
-{selectedElection.winner && (
-  <div className="winner-box">
-    🏆 <strong>Currently Leading:</strong> {selectedElection.winner.name} with {selectedElection.winner.voteCount} vote(s)
-  </div>
-)}
+          {selectedElection.winner && (
+            <div className="winner-box">
+              🏆 <strong>Currently Leading:</strong> {selectedElection.winner.name} with {selectedElection.winner.voteCount} vote(s)
+            </div>
+          )}
 
-<button className="view-btn" onClick={() => setShowLog(!showLog)}>
-  {showLog ? "Hide Voting Log" : "View Voting Log"}
-</button>
+          <button className="view-btn" onClick={() => setShowLog(!showLog)}>
+            {showLog ? "Hide Voting Log" : "View Voting Log"}
+          </button>
 
-{showLog && (
-  <div className="voting-log-container">
-    <VoteLog electionId={selectedElection.electionid} />
-  </div>
-)}
+          {showLog && (
+            <div className="voting-log-container">
+              <VoteLog electionId={selectedElection.electionid} />
+            </div>
+          )}
         </div>
       </div>
     );
@@ -284,7 +290,10 @@ const ViewElection = () => {
             </div>
           )}
 
-          <button className="view-btn" onClick={() => setSelectedElection(filteredelectionbydate)}>
+          <button
+            className="view-btn"
+            onClick={() => navigate(`/view-elections?id=${filteredelectionbydate.electionid}`)}
+          >
             View Details
           </button>
         </div>

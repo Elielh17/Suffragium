@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { FiUser, FiChevronDown, FiHome } from "react-icons/fi"; // Import home icon
 import "./Navbar.css"; // Import CSS file
 
@@ -7,6 +7,7 @@ const Navbar = () => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
     const toggleDropdown = () => setIsDropdownOpen(!isDropdownOpen);
+    const navigate = useNavigate();
 
     return (
         <nav className="navbar">
@@ -22,8 +23,8 @@ const Navbar = () => {
                 <Link to="/create-election" className="nav-link">Create an Election</Link>
                 {/* <Link to="/join-election" className="nav-link">Join an Election</Link> */}
                 <Link to="/view-elections" className="nav-link">View elections</Link>
+                <Link to="/my-elections" className="nav-link">My Elections</Link>
                 {/* <Link to="/table-test" className="nav-link">View election table test</Link> */}
-                <Link to="/login" className="nav-link">Login</Link>
             </div>
 
             {/* User Dropdown on the Right */}
@@ -35,6 +36,7 @@ const Navbar = () => {
                     </button>
                     {isDropdownOpen && (
                         <div className="dropdown-menu">
+                            <Link to="/login" className="dropdown-item">Login</Link>
                             <Link to="/profile" className="dropdown-item">Profile</Link>
                             <Link to="/settings" className="dropdown-item">Settings</Link>
                             <hr />

@@ -7,6 +7,8 @@ import { useState, useEffect } from "react";
 import Login from "./pages/Login";
 import ViewElections from "./pages/ViewElections";
 import JoinElection from "./pages/JoinElection";
+import ManageElection from "./pages/ManageElection";
+import MyElections from "./pages/MyElections";
 
 //const API_URL = "http://localhost:5000";
 
@@ -44,6 +46,8 @@ function App() {
                 <Route path="/login" element={<Login />} />
                 <Route path="/view-elections" element={<ViewElections />} />
                 <Route path="/join-election" element={<JoinElection/>} />
+                <Route path="/manage-election" element={<ManageElection />} />
+                <Route path="/my-elections" element={<MyElections />} />
 
                 {/* Other Routes */}
             </Routes>

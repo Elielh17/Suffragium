@@ -84,11 +84,19 @@ const CreateElection = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
-    if (candidates.length < 2) {
-      alert("Please add at least two candidates to create an election.");
+    setIsSubmitting(true);
+
+    if (typeCode === 2 && roles.length === 0) {
+      alert("Please add at least one role for a weighted election.");
+      setIsSubmitting(false);
       return;
     }
-    setIsSubmitting(true);
+
+    if (candidates.length < 2) {
+      alert("Please add at least two candidates to create an election.");
+      setIsSubmitting(false);
+      return;
+    }
 
     if (candidates.length < 2) {
       alert("Please add at least two candidates to create an election.");
@@ -100,6 +108,10 @@ const CreateElection = () => {
     const isPrivate = visibility === "private";
     const accessToken = isPrivate ? uuidv4() : null;
 
+    const {
+      data: { session }
+    } = await supabase.auth.getSession();
+
     const electionData = {
       electionname: electionName,
       description: electionDescription,
@@ -110,10 +122,15 @@ const CreateElection = () => {
       permittedrolecodes: [],
       visibility: visibility === "public",
       access_token: accessToken,
+      userid: session.user.id,
     };
 
     const { data, error } = await supabase.from("election").insert([electionData]).select();
-    if (error || !data?.length) return alert("Failed to create the election.");
+    if (error || !data?.length) {
+    alert("Failed to create the election.");
+    setIsSubmitting(false);
+    return;
+  }
     const electionId = data[0].electionid;
 
     await supabase.from("candidates").insert(
@@ -125,7 +142,6 @@ const CreateElection = () => {
       }))
     );
 
-    // Insert email assignments directly to user_role
     await Promise.all(emailAssignments.map(async (assignment) => {
       await supabase.from("user_role").insert({
         email: assignment.email,
@@ -136,13 +152,14 @@ const CreateElection = () => {
     }));
 
     const url = isPrivate
-    ? `${window.location.origin}/Suffragium/#/view-elections?token=${accessToken}`
-    : `${window.location.origin}/Suffragium/#/view-elections`;
+      ? `${window.location.origin}/Suffragium/#/view-elections?token=${accessToken}`
+      : `${window.location.origin}/Suffragium/#/view-elections?id=${electionId}`;
+
     setShareableLink(url);
     setShareMessage("Election and candidates created successfully!");
     setShowPopup(true);
-    setIsSubmitting(false);
-    setIsSubmitting(false);
+
+    navigate(`/manage-election?id=${electionId}`);
   };
 
   return (

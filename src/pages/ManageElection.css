@@ -1,0 +1,98 @@
+/* ManageElection.css - enhanced */
+
+.page-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 80px;
+    width: 100%;
+    min-height: 100vh;
+    background-color: #121212;
+    box-sizing: border-box;
+  }
+  
+  .manage-election-wrapper {
+    width: 100%;
+    max-width: 720px;
+    padding: 0 16px;
+  }
+  
+  .manage-election-wrapper h2 {
+    text-align: center;
+    margin-bottom: 24px;
+    color: #00b4d8;
+  }
+  
+  section {
+    background: #1f1f1f;
+    padding: 32px;
+    margin-bottom: 24px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    color: #fff;
+  }
+  
+  h3 {
+    margin-top: 0;
+    color: #00b4d8;
+  }
+  
+  p, li {
+    font-size: 16px;
+    line-height: 1.5;
+    color: #ccc;
+  }
+  
+  input[type="text"] {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 14px;
+    background: #2b2b2b;
+    color: #00eaff;
+    border: 1px solid #444;
+    border-radius: 6px;
+    margin-top: 8px;
+    font-family: monospace;
+  }
+  
+  ul {
+    padding-left: 20px;
+    margin-top: 12px;
+  }
+  
+  li {
+    margin-bottom: 8px;
+  }
+  
+  .shareable-note {
+    font-size: 14px;
+    color: #aaa;
+    margin-top: 6px;
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    .page-wrapper {
+      background: #121212;
+      color: #eee;
+    }
+  
+    section {
+      background: #1f1f1f;
+      border: 1px solid #333;
+    }
+  
+    input[type="text"] {
+      background: #2b2b2b;
+      color: #00eaff;
+      border-color: #555;
+    }
+  
+    h3 {
+      color: #00b4d8;
+    }
+  
+    p, li {
+      color: #ccc;
+    }
+  }
+  
