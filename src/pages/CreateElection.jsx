@@ -29,6 +29,7 @@ const CreateElection = () => {
   const [shareableLink, setShareableLink] = useState("");
   const [showPopup, setShowPopup] = useState(false);
   const navigate = useNavigate();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -82,6 +83,13 @@ const CreateElection = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    if (candidates.length < 2) {
+      alert("Please add at least two candidates to create an election.");
+      return;
+    }
+    setIsSubmitting(true);
+
     if (candidates.length < 2) {
       alert("Please add at least two candidates to create an election.");
       return;
@@ -133,6 +141,8 @@ const CreateElection = () => {
     setShareableLink(url);
     setShareMessage("Election and candidates created successfully!");
     setShowPopup(true);
+    setIsSubmitting(false);
+    setIsSubmitting(false);
   };
 
   return (
@@ -248,7 +258,11 @@ const CreateElection = () => {
               </div>
             )}
 
-            <button type="submit" className="submit-btn">Create Election</button>
+            {!shareMessage && (
+              <button type="submit" className="submit-btn" disabled={isSubmitting}>
+                {isSubmitting ? "Creating..." : "Create Election"}
+              </button>
+            )}
           </form>
 
           {showPopup && shareMessage && (
@@ -262,6 +276,7 @@ const CreateElection = () => {
                 </div>
               )}
               <button onClick={() => setShowPopup(false)}>Close</button>
+              <button onClick={() => navigate('/view-elections')}>View Election</button>
             </div>
           )}
         </main>
