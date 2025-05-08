@@ -5,6 +5,11 @@ import { supabase } from "../supabaseClient";
 import "./ManageElection.css";
 
 const ManageElection = () => {
+  const [showWinnerPopup, setShowWinnerPopup] = useState(false);
+  const [winnerName, setWinnerName] = useState("");
+  const [tieBreakTypes, setTieBreakTypes] = useState([]);
+  const [tiedCandidates, setTiedCandidates] = useState([]);
+  const [selectedCandidate, setSelectedCandidate] = useState("");
   const [newRole, setNewRole] = useState({ description: "", voteweight: 1 });
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -21,6 +26,10 @@ const ManageElection = () => {
 
   useEffect(() => {
     const loadElection = async () => {
+    let tied = [];
+    let candidateList = [];
+    const { data: tieData } = await supabase.from("types").select("id, description").gte("id", 101);
+    if (tieData) setTieBreakTypes(tieData);
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -29,21 +38,55 @@ const ManageElection = () => {
 
       let query;
       if (accessToken) {
-        query = supabase.from("election").select("*").eq("access_token", accessToken);
+        query = supabase.from("election").select("*, candidates(*)").eq("access_token", accessToken);
       } else if (electionIdParam) {
         query = supabase.from("election").select("*").eq("electionid", electionIdParam);
       } else {
         return alert("No election identifier provided.");
       }
 
-      const { data, error } = await query.single();
+      const { data, error } = await query;
       if (error || !data) return alert("Election not found.");
       if (data.userid && data.userid !== session.user.id) {
         alert("You are not authorized to manage this election.");
         return navigate("/");
       }
-      setElection(data);
+      const electionData = Array.isArray(data) ? data[0] : data;
+      setElection(electionData);
+      setNewDescription(electionData.description);
+
+      const { data: candidates } = await supabase
+        .from("candidates")
+        .select("*")
+        .eq("electionid", electionData.electionid);
+      if (candidates) {
+        electionData.candidates = candidates;
+      }
       setNewDescription(data.description);
+
+      // Automatically check for tied candidates if creator decides
+      if (electionData.tie_break_type_id === 103 && new Date(electionData.enddate) < new Date()) {
+        const { data: candidates } = await supabase
+          .from("candidates")
+          .select("id, name")
+          .eq("electionid", electionData.electionid);
+
+        const { data: votes } = await supabase
+          .from("votes")
+          .select("candidateid, email, weight")
+          .eq("electionid", electionData.electionid);
+
+        const voteCountMap = {};
+        for (const vote of votes) {
+          const cid = vote.candidateid;
+          if (!cid) continue;
+          voteCountMap[cid] = (voteCountMap[cid] || 0) + (vote.weight || 1);
+        }
+
+        const maxVotes = Math.max(...Object.values(voteCountMap));
+        tied = candidates.filter(c => voteCountMap[c.id] === maxVotes);
+        setTiedCandidates(tied);
+      }
     };
 
     loadElection();
@@ -143,9 +186,45 @@ const ManageElection = () => {
             )}
           </p>
           <p><strong>Type:</strong> {election.typecode === 2 ? "Weighted" : "Normal"}</p>
-          <p><strong>Start:</strong> {election.startdate}</p>
-          <p><strong>End:</strong> {election.enddate}</p>
+          <p><strong>Start:</strong> {new Date(election.startdate).toLocaleString()}</p>
+          <p><strong>End:</strong> {new Date(election.enddate).toLocaleString()}</p>
           <p><strong>Visibility:</strong> {election.visibility ? "Public" : "Private"}</p>
+<p><strong>Status:</strong> {new Date(election.enddate) < new Date() ? "Ended" : "Open"}</p>
+          <p><strong>Tie-Break Method:</strong> {tieBreakTypes.find(t => t.id === election.tie_break_type_id)?.description || 'None'}</p>
+          <h4>Candidates</h4>
+<ul>
+  {election.candidates?.map((c, i) => (
+    <li key={i}>
+      <strong>{c.name}</strong>: {c.description || "No description"}
+    </li>
+  ))}
+</ul>
+
+{new Date(election.enddate) < new Date() && election.candidates && (() => {
+  const manualWinner = election.candidates.find(c => c.is_manual_winner);
+  const sorted = [...election.candidates].sort((a, b) => b.voteCount - a.voteCount);
+  const topVoted = sorted[0];
+  const topVoteCount = topVoted?.voteCount;
+  const tied = sorted.filter(c => c.voteCount === topVoteCount);
+
+  if (manualWinner) {
+    return (
+      <div className="winner-box">
+        <p><strong>Winner:</strong> {manualWinner.name}</p>
+        <em>This tie has been resolved by the election creator.</em>
+      </div>
+    );
+  } else if (tied.length === 1) {
+    return (
+      <div className="winner-box">
+        <p><strong>Winner:</strong> {topVoted.name}</p>
+        <em>This election has concluded with a clear winner.</em>
+      </div>
+    );
+  } else {
+    return null;
+  }
+})()}
         </section>
 
         <section>
@@ -218,8 +297,61 @@ const ManageElection = () => {
             <button style={{ marginTop: 20 }} className="submit-btn" onClick={handleApplyChanges}>Apply Role Changes</button>
           </section>
         )}
+
+        {election.tie_break_type_id === 103 && new Date(election.enddate) < new Date() && (
+        <section style={{ marginTop: 32 }}>
+  <h3>Resolve Tie (Creator Decision)</h3>
+  {tiedCandidates.length > 1 ? (
+    election.candidates?.some(c => c.is_manual_winner) ? (
+      <div className="winner-box">
+        <p><strong>Winner:</strong> {election.candidates.find(c => c.is_manual_winner)?.name}</p>
+        <em>This tie has been resolved by the election creator.</em>
       </div>
+    ) : (
+      <div style={{ marginTop: 16 }}>
+        <select value={selectedCandidate} onChange={(e) => setSelectedCandidate(e.target.value)}>
+          <option value="">Select Winner</option>
+          {tiedCandidates.map(c => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+        <button
+          style={{ marginLeft: 10 }}
+          onClick={async () => {
+            if (!selectedCandidate) return alert("Please select a candidate");
+            const winner = tiedCandidates.find(c => c.id === parseInt(selectedCandidate));
+            await supabase
+              .from("candidates")
+              .update({ is_manual_winner: false })
+              .eq("electionid", election.electionid);
+            const { error } = await supabase
+              .from("candidates")
+              .update({ is_manual_winner: true })
+              .eq("id", parseInt(selectedCandidate));
+            if (!error && winner) {
+              setWinnerName(winner.name);
+              setShowWinnerPopup(true);
+              setTiedCandidates([]);
+              setSelectedCandidate("");
+            }
+          }}>
+          Confirm Winner
+        </button>
+      </div>
+    )
+  ) : <p>No tie to resolve.</p>}
+</section>
+      )}
+
+      {showWinnerPopup && (
+        <div className="popup-message">
+          <p>✅ Winner selected: <strong>{winnerName}</strong></p>
+          <p>This tie has been resolved manually.</p>
+          <button onClick={() => setShowWinnerPopup(false)}>Close</button>
+        </div>
+      )}
     </div>
+  </div>
   );
 };
 
