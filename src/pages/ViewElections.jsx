@@ -6,8 +6,45 @@ import "./ViewElections.css";
 import VoteLog from "./VoteLog.jsx";
 
 const ViewElection = () => {
-  const today = new Date().toISOString().split("T")[0];
   const [activeTab, setActiveTab] = useState("available");
+  const [elections, setElections] = useState([]);
+  const [selectedElection, setSelectedElection] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState(null);
+  const [userEmail, setUserEmail] = useState(null);
+  const [votedElections, setVotedElections] = useState([]);
+  const [joinedElections, setJoinedElections] = useState([]);
+  const [showLog, setShowLog] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const today = new Date().toISOString().split("T")[0];
+
+  useEffect(() => {
+    const resolveRandomTie = async () => {
+      if (
+        selectedElection &&
+        selectedElection.tie_break_type_id === 102 &&
+        new Date(selectedElection.enddate) < new Date() &&
+        selectedElection.isTie &&
+        !selectedElection.candidates.some(c => c.is_manual_winner)
+      ) {
+        const randomWinner = selectedElection.tiedCandidates[
+          Math.floor(Math.random() * selectedElection.tiedCandidates.length)
+        ];
+
+        const { error } = await supabase
+          .from("candidates")
+          .update({ is_manual_winner: true })
+          .eq("id", randomWinner.id);
+
+        if (!error) {
+          window.location.reload();
+        }
+      }
+    };
+    resolveRandomTie();
+  }, [selectedElection]);
+
   const renderTieMessage = () => {
     if (!selectedElection) return null;
 
@@ -18,8 +55,8 @@ const ViewElection = () => {
       return (
         <div className="winner-box">
           <FaTrophy style={{ marginRight: 6 }} />
-          <strong>Final Winner (Creator Decision):</strong> {manualWinner.name}<br />
-          <em>This tie was resolved manually by the election creator.</em>
+          <strong>Final Winner (Random):</strong> {manualWinner.name}<br />
+          <em>This tie was resolved automatically using a random method.</em>
         </div>
       );
     }
@@ -36,14 +73,6 @@ const ViewElection = () => {
     }
 
     switch (selectedElection.tie_break_type_id) {
-      case 102: {
-        const randomWinner = selectedElection.tiedCandidates[Math.floor(Math.random() * selectedElection.tiedCandidates.length)];
-        return (
-          <div className="winner-box">
-            <FaRandom style={{ marginRight: 6 }} /> <strong>Random Tie-Break Winner:</strong> {randomWinner.name} with {randomWinner.voteCount} vote(s)
-          </div>
-        );
-      }
       case 103:
         return (
           <div className="winner-box">
@@ -70,16 +99,7 @@ const ViewElection = () => {
         );
     }
   };
-  const [elections, setElections] = useState([]);
-  const [selectedElection, setSelectedElection] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState(null);
-  const [userEmail, setUserEmail] = useState(null);
-  const [votedElections, setVotedElections] = useState([]);
-  const [joinedElections, setJoinedElections] = useState([]);
-  const [showLog, setShowLog] = useState(false);
-  const location = useLocation();
-  const navigate = useNavigate();
+
 
   useEffect(() => {
     const fetchData = async () => {
