@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import "./Home.css"; // Import CSS file
+import ProtectedRoute from "../components/ProtectedRoute";
 
 const Home = () => {
     return (
@@ -12,8 +13,8 @@ const Home = () => {
 
             {/* Buttons to navigate to Create and Join Election pages */}
             <div className="home-buttons">
-                <Link to="/create-election" className="home-button">Create Election</Link>
-                <Link to="/view-elections" className="home-button join">View Elections</Link>
+                <ProtectedRoute><Link to="/create-election" className="home-button">Create Election</Link></ProtectedRoute>
+                <ProtectedRoute><Link to="/view-elections" className="home-button join">View Elections</Link></ProtectedRoute>
             </div>
         </div>
     );

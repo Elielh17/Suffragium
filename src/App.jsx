@@ -9,6 +9,7 @@ import ViewElections from "./pages/ViewElections";
 import JoinElection from "./pages/JoinElection";
 import ManageElection from "./pages/ManageElection";
 import MyElections from "./pages/MyElections";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 //const API_URL = "http://localhost:5000";
 
@@ -40,16 +41,14 @@ function App() {
         <Router>
             <Navbar />
             <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/create-election" element={<CreateElection />} />
-                {/* <Route path="/table-test" element={<TableTest />} /> */}
-                <Route path="/login" element={<Login />} />
-                <Route path="/view-elections" element={<ViewElections />} />
-                <Route path="/join-election" element={<JoinElection/>} />
-                <Route path="/manage-election" element={<ManageElection />} />
-                <Route path="/my-elections" element={<MyElections />} />
-
-                {/* Other Routes */}
+                <Route path="/" element={<ProtectedRoute> <Home /> </ProtectedRoute>} />
+                <Route path="/create-election" element={<ProtectedRoute> <CreateElection /> </ProtectedRoute>} />
+                <Route path="/view-elections" element={<ProtectedRoute> <ViewElections /> </ProtectedRoute>} />
+                <Route path="/join-election" element={<ProtectedRoute> <JoinElection /> </ProtectedRoute>} />
+                <Route path="/manage-election" element={<ProtectedRoute> <ManageElection /> </ProtectedRoute>} />
+                <Route path="/my-elections" element={<ProtectedRoute> <MyElections /> </ProtectedRoute>} />
+                <Route path="/login" element={<Login />} /> 
+                {/* Public */}
             </Routes>
         </Router>
     );
