@@ -286,36 +286,7 @@ const ViewElection = () => {
     fetchData();
   }, [location.search]);
 
-  const handleJoin = async (electionId) => {
-    if (!userId) return;
-
-    const { data: existingVote } = await supabase
-      .from("votes")
-      .select("*")
-      .eq("userid", userId)
-      .eq("electionid", electionId)
-      .maybeSingle();
-
-    if (existingVote) {
-      alert("You've already joined this election.");
-      return;
-    }
-
-    const { error } = await supabase.from("votes").insert([
-      {
-        userid: userId,
-        electionid: electionId,
-        candidateid: null,
-      },
-    ]);
-
-    if (!error) {
-      setJoinedElections([...joinedElections, electionId]);
-      alert("You have joined the election!");
-    }
-  };
-
-  const handleVote = async (candidateId, electionId) => {
+    const handleVote = async (candidateId, electionId) => {
     if (!userId) return;
 
     const { data: electionData, error: electionError } = await supabase
@@ -350,8 +321,74 @@ const ViewElection = () => {
     if (!error) {
       setVotedElections([...votedElections, electionId]);
       alert(`Vote cast successfully with weight ${weight}!`);
-    } else {
-      alert("Failed to cast vote.");
+
+      // Fetch candidate name
+      const { data: candidateData } = await supabase
+        .from("candidates")
+        .select("name")
+        .eq("id", candidateId)
+        .maybeSingle();
+
+      // Fetch election name
+      const { data: electionMeta } = await supabase
+        .from("election")
+        .select("electionname")
+        .eq("electionid", electionId)
+        .maybeSingle();
+
+      // // Send receipt email
+      // const response = await fetch("https://cxlrsjulixkuhbgtxwho.supabase.co/functions/v1/send-receipt", {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({
+      //     to: userEmail,
+      //     candidateName: candidateData?.name,
+      //     electionName: electionMeta?.electionname
+      //   })
+      // });
+
+      // if (response.ok) {
+      //   alert("✅ Vote receipt email sent!");
+      // } else {
+      //   const errorText = await response.text();
+      //   console.warn("Email failed to send:", errorText);
+      //   alert("⚠️ Vote receipt email failed to send.");
+      // }
+
+      
+    } 
+    else {
+        alert("Failed to cast vote.");
+      }
+
+  };
+
+  const handleJoin = async (electionId) => {
+    if (!userId) return;
+
+    const { data: existingVote } = await supabase
+      .from("votes")
+      .select("*")
+      .eq("userid", userId)
+      .eq("electionid", electionId)
+      .maybeSingle();
+
+    if (existingVote) {
+      alert("You've already joined this election.");
+      return;
+    }
+
+    const { error } = await supabase.from("votes").insert([
+      {
+        userid: userId,
+        electionid: electionId,
+        candidateid: null,
+      },
+    ]);
+
+    if (!error) {
+      setJoinedElections([...joinedElections, electionId]);
+      alert("You have joined the election!");
     }
   };
 
@@ -376,6 +413,18 @@ const ViewElection = () => {
           <h2>{selectedElection.electionname}</h2>
           <p className="election-dates">
             <strong>Duration:</strong> {new Date(selectedElection.startdate).toLocaleString()} to {new Date(selectedElection.enddate).toLocaleString()}
+          </p>
+          <p className="election-description">
+            <strong>Tie-Breaking Method:</strong>{" "}
+            {selectedElection.tie_break_type_id === 101 ? "None" :
+            selectedElection.tie_break_type_id === 102 ? "Random" :
+            selectedElection.tie_break_type_id === 103 ? "Creator" :
+            selectedElection.tie_break_type_id === 104 ? "Role-Based" :
+            selectedElection.tie_break_type_id === 105 ? "Revote" :
+            "Unknown"}
+          </p>
+          <p className="election-description">
+            <strong>Type:</strong> {selectedElection.typecode === 2 ? "Weighted" : "Normal"}
           </p>
           <p className="election-description">
             <strong>Description:</strong> {selectedElection.description}
@@ -403,11 +452,12 @@ const ViewElection = () => {
             </div>
           </div>
 
-          {!hasJoined && (
+          {!hasJoined && new Date(selectedElection.enddate) > new Date() && (
             <button className="view-btn" onClick={() => handleJoin(selectedElection.electionid)}>
               Join Election
             </button>
           )}
+
 
           {renderTieMessage()}
 
@@ -448,9 +498,9 @@ const ViewElection = () => {
           {elections.filter(e => e.has_started && e.not_ended).map((e) => (
             <div key={e.electionid} className="election-card">
               <h3>{e.electionname}</h3>
-              <p>{e.description}</p>
+              <p>Description: {e.description}</p>
               <p>
-                Dates: {e.startdate} to {e.enddate}
+                Duration: {new Date(e.startdate).toLocaleString()} to {new Date(e.enddate).toLocaleString()}
               </p>
               <div className="candidate-box">
                 <h4>Candidates</h4>
@@ -484,9 +534,9 @@ const ViewElection = () => {
           {elections.filter(e => !e.not_ended).map((e) => (
             <div key={e.electionid} className="election-card">
               <h3>{e.electionname}</h3>
-              <p>{e.description}</p>
+              <p>Description: {e.description}</p>
               <p>
-                Dates: {e.startdate} to {e.enddate}
+                Duration: {new Date(e.startdate).toLocaleString()} to {new Date(e.enddate).toLocaleString()}
               </p>
               <div className="candidate-box">
                 <h4>Candidates</h4>

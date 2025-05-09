@@ -218,6 +218,7 @@ const CreateElection = () => {
                     </select>
                   </>
                 )}
+                {/* 
                 <div className="password-toggle">
                   <label>
                     Add Password to Election
@@ -229,7 +230,7 @@ const CreateElection = () => {
                     <label>Password:</label>
                     <input type="password" value={electionPassword} onChange={(e) => setElectionPassword(e.target.value)} placeholder="Enter election password" />
                   </div>
-                )}
+                )}*/}
               </div>
             )}
 
@@ -248,6 +249,7 @@ const CreateElection = () => {
                 <div className="add-candidate">
                   <input type="text" value={newCandidate} onChange={(e) => setNewCandidate(e.target.value)} placeholder="Enter candidate name" />
                   <textarea value={newCandidateDescription} onChange={(e) => setNewCandidateDescription(e.target.value)} rows="4" placeholder="Enter candidate description"></textarea>
+                  <label>Image of candidate:</label>
                   <input type="file" accept="image/*" onChange={(e) => {
                     setNewCandidateImage(e.target.files[0]);
                     setImagePreview(URL.createObjectURL(e.target.files[0]));
@@ -260,6 +262,8 @@ const CreateElection = () => {
 
             {activeTab === "roles" && (
               <div className="form-section">
+                <h2>What are Roles?</h2>
+                <text>Roles let you assign different voting weights to participants in a weighted election. For example, a "Professor" role might carry more influence than a "Student" vote. You can also assign specific roles to voter emails, ensuring each person's vote counts exactly as intended.</text>
                 <label>Add Role:</label>
                 <input type="text" value={newRole.description} onChange={(e) => setNewRole({ ...newRole, description: e.target.value })} placeholder="Role Name" />
                 <input type="number" step="0.1" value={isNaN(newRole.voteweight) ? '' : newRole.voteweight} onChange={(e) => setNewRole({ ...newRole, voteweight: parseFloat(e.target.value) || 0 })} placeholder="Vote Weight" />
@@ -295,6 +299,17 @@ const CreateElection = () => {
                     <p key={i}><strong>{a.email}</strong> → {a.role} (Weight: {a.weight})</p>
                   ))}
                 </div>
+                {tieBreakTypeId === 104 && (
+                  <>
+                    <label>Role to resolve tie:</label>
+                    <select value={tiebreakRole} onChange={(e) => setTiebreakRole(e.target.value)}>
+                      <option value="">Select Role</option>
+                      {roles.map((r, i) => (
+                        <option key={i} value={r.description}>{r.description}</option>
+                      ))}
+                    </select>
+                  </>
+                )}
               </div>
             )}
 
