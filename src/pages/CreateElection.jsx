@@ -30,6 +30,9 @@ const CreateElection = () => {
   const [showPopup, setShowPopup] = useState(false);
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [tieBreakTypeId, setTieBreakTypeId] = useState(null);
+  const [tieBreakTypes, setTieBreakTypes] = useState([]);
+  const [tiebreakRole, setTiebreakRole] = useState("");
 
   useEffect(() => {
     const checkSession = async () => {
@@ -39,6 +42,16 @@ const CreateElection = () => {
       if (!session) navigate("/login");
     };
     checkSession();
+
+    const loadTieBreakTypes = async () => {
+      const { data, error } = await supabase
+        .from("types")
+        .select("id, description")
+        .gte("id", 101);
+
+      if (!error) setTieBreakTypes(data);
+    };
+    loadTieBreakTypes();
   }, [navigate]);
 
   const uploadImage = async (file) => {
@@ -98,13 +111,8 @@ const CreateElection = () => {
       return;
     }
 
-    if (candidates.length < 2) {
-      alert("Please add at least two candidates to create an election.");
-      return;
-    }
-
-    const formattedStartDate = startDate.split("T")[0];
-    const formattedEndDate = endDate.split("T")[0];
+    const formattedStartDate = startDate;
+    const formattedEndDate = endDate;
     const isPrivate = visibility === "private";
     const accessToken = isPrivate ? uuidv4() : null;
 
@@ -123,14 +131,16 @@ const CreateElection = () => {
       visibility: visibility === "public",
       access_token: accessToken,
       userid: session.user.id,
+      tie_break_type_id: tieBreakTypeId || null,
+      tiebreak_role: tieBreakTypeId === 104 ? tiebreakRole : null
     };
 
     const { data, error } = await supabase.from("election").insert([electionData]).select();
     if (error || !data?.length) {
-    alert("Failed to create the election.");
-    setIsSubmitting(false);
-    return;
-  }
+      alert("Failed to create the election.");
+      setIsSubmitting(false);
+      return;
+    }
     const electionId = data[0].electionid;
 
     await supabase.from("candidates").insert(
@@ -190,11 +200,24 @@ const CreateElection = () => {
                   <option value={2}>Weighted</option>
                   <option value={3}>Placeholder</option>
                 </select>
-                <label>Visibility:</label>
-                <select value={visibility} onChange={(e) => setVisibility(e.target.value)}>
-                  <option value="public">Public</option>
-                  <option value="private">Private (Shareable Link)</option>
+                <label>Tie-Breaking Method:</label>
+                <select value={tieBreakTypeId || ""} onChange={(e) => setTieBreakTypeId(parseInt(e.target.value))}>
+                  <option value="">Select a method</option>
+                  {tieBreakTypes?.map((t) => (
+                    <option key={t.id} value={t.id}>{t.description}</option>
+                  ))}
                 </select>
+                {tieBreakTypeId === 104 && (
+                  <>
+                    <label>Role to resolve tie:</label>
+                    <select value={tiebreakRole} onChange={(e) => setTiebreakRole(e.target.value)}>
+                      <option value="">Select Role</option>
+                      {roles.map((r, i) => (
+                        <option key={i} value={r.description}>{r.description}</option>
+                      ))}
+                    </select>
+                  </>
+                )}
                 <div className="password-toggle">
                   <label>
                     Add Password to Election

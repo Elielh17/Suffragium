@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import { FaGavel, FaRandom, FaRedo, FaBalanceScale, FaExclamationTriangle, FaTrophy } from "react-icons/fa";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import "./ViewElections.css";
 import VoteLog from "./VoteLog.jsx";
 
 const ViewElection = () => {
+  const [activeTab, setActiveTab] = useState("available");
   const [elections, setElections] = useState([]);
   const [selectedElection, setSelectedElection] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -15,6 +17,159 @@ const ViewElection = () => {
   const [showLog, setShowLog] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const today = new Date().toISOString().split("T")[0];
+
+  useEffect(() => {
+    const resolveRandomTie = async () => {
+      if (
+        selectedElection &&
+        selectedElection.tie_break_type_id === 102 &&
+        new Date(selectedElection.enddate) < new Date() &&
+        selectedElection.isTie &&
+        !selectedElection.candidates.some(c => c.is_manual_winner)
+      ) {
+        const randomWinner = selectedElection.tiedCandidates[
+          Math.floor(Math.random() * selectedElection.tiedCandidates.length)
+        ];
+
+        const { error } = await supabase
+          .from("candidates")
+          .update({ is_manual_winner: true })
+          .eq("id", randomWinner.id);
+
+        if (!error) {
+          window.location.reload();
+        }
+      }
+    };
+    resolveRandomTie();
+  }, [selectedElection]);
+
+  useEffect(() => {
+    const resolveRoleBasedTie = async () => {
+      if (
+        selectedElection &&
+        selectedElection.tie_break_type_id === 104 &&
+        new Date(selectedElection.enddate) < new Date() &&
+        selectedElection.isTie &&
+        !selectedElection.candidates.some(c => c.is_manual_winner)
+      ) {
+        const priorityRole = selectedElection.tiebreak_role;
+        const tiedCandidateIds = selectedElection.tiedCandidates.map(c => c.id);
+  
+        const { data: votes } = await supabase
+          .from("votes")
+          .select("candidateid, email, weight")
+          .eq("electionid", selectedElection.electionid)
+          .in("candidateid", tiedCandidateIds);
+  
+        const { data: roleAssignments } = await supabase
+          .from("user_role")
+          .select("email, role")
+          .eq("electionid", selectedElection.electionid);
+  
+        const prioritizedVotes = votes?.filter(v => {
+          const role = roleAssignments?.find(r => r.email === v.email);
+          return role?.role === priorityRole;
+        }) || [];
+  
+        const voteCountMap = {};
+        for (const vote of prioritizedVotes) {
+          if (!vote.candidateid) continue;
+          voteCountMap[vote.candidateid] = (voteCountMap[vote.candidateid] || 0) + (vote.weight || 1);
+        }
+  
+        let highestVotes = -1;
+        let selectedCandidateId = null;
+        for (const [candidateId, count] of Object.entries(voteCountMap)) {
+          if (count > highestVotes) {
+            highestVotes = count;
+            selectedCandidateId = candidateId;
+          }
+        }
+  
+        if (selectedCandidateId) {
+          const { error } = await supabase
+            .from("candidates")
+            .update({ is_manual_winner: true })
+            .eq("id", selectedCandidateId);
+  
+          if (!error) {
+            window.location.reload();
+          }
+        }
+      }
+    };
+    resolveRoleBasedTie();
+  }, [selectedElection]);
+  
+
+  const renderTieMessage = () => {
+    if (!selectedElection) return null;
+
+    const reevaluatedHasEnded = new Date(selectedElection.enddate) < new Date();
+    const manualWinner = selectedElection.candidates.find(c => c.is_manual_winner);
+
+    if (manualWinner) {
+      let method = "Creator Decision";
+      let explanation = "This tie has been resolved manually by the election creator.";
+
+      if (selectedElection.tie_break_type_id === 102) {
+        method = "Random";
+        explanation = "This tie was resolved automatically using a random method.";
+      } else if (selectedElection.tie_break_type_id === 104) {
+        method = "Role-Based";
+        explanation = `This tie was resolved using role-based logic, giving priority to the role: ${selectedElection.tiebreak_role}`;
+      }
+
+      return (
+        <div className="winner-box">
+          <FaTrophy style={{ marginRight: 6 }} />
+          <strong>Final Winner ({method}):</strong> {manualWinner.name}<br />
+          <em>{explanation}</em>
+        </div>
+      );
+    }
+
+    if (!selectedElection?.isTie || !reevaluatedHasEnded) {
+      return (
+        selectedElection.winner && (
+          <div className="winner-box">
+            <FaTrophy style={{ marginRight: 6 }} />
+            <strong>Currently Leading:</strong> {selectedElection.winner.name} with {selectedElection.winner.voteCount} vote(s)
+          </div>
+        )
+      );
+    }
+
+    switch (selectedElection.tie_break_type_id) {
+      case 103:
+        return (
+          <div className="winner-box">
+            <FaBalanceScale style={{ marginRight: 6 }} /> <strong>Tie Detected:</strong> Awaiting decision from creator for: {selectedElection.tiedCandidates.map(c => c.name).join(", ")}
+          </div>
+        );
+      case 104:
+        return (
+          <div className="winner-box">
+            <FaGavel style={{ marginRight: 6 }} /> <strong>Tie Detected:</strong> Voting required by specific role to decide: {selectedElection.tiedCandidates.map(c => c.name).join(", ")}
+          </div>
+        );
+      case 105:
+        return (
+          <div className="winner-box">
+            <FaRedo style={{ marginRight: 6 }} /> <strong>Tie Detected:</strong> A revote is required between: {selectedElection.tiedCandidates.map(c => c.name).join(", ")}
+          </div>
+        );
+      default:
+        return (
+          <div className="winner-box">
+            <FaExclamationTriangle style={{ marginRight: 6 }} /> <strong>Tie Detected:</strong> No tie-breaking method specified.
+          </div>
+        );
+    }
+  };
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -85,10 +240,16 @@ const ViewElection = () => {
 
         const sortedCandidates = [...candidates].sort((a, b) => b.voteCount - a.voteCount);
 
+        const topVotes = sortedCandidates[0]?.voteCount || 0;
+        const tiedCandidates = sortedCandidates.filter(c => c.voteCount === topVotes);
+        const isTie = tiedCandidates.length > 1;
+
         return {
           ...filteredelectionbydate,
           candidates: sortedCandidates,
           winner: sortedCandidates[0] || null,
+          isTie,
+          tiedCandidates: isTie ? tiedCandidates : []
         };
       });
 
@@ -202,13 +363,19 @@ const ViewElection = () => {
 
     return (
       <div className="election-detail-container">
-        <button className="back-btn" onClick={() => setSelectedElection(null)}>
-          ← Back to Elections
-        </button>
+        <button className="back-btn" onClick={() => {
+  setSelectedElection(null);
+  const params = new URLSearchParams(location.search);
+  if (params.has("id") || params.has("token")) {
+    navigate("/view-elections", { replace: true });
+  }
+}}>
+  ← Back to Elections
+</button>
         <div className="election-card expanded">
           <h2>{selectedElection.electionname}</h2>
           <p className="election-dates">
-            <strong>Duration:</strong> {selectedElection.startdate} to {selectedElection.enddate}
+            <strong>Duration:</strong> {new Date(selectedElection.startdate).toLocaleString()} to {new Date(selectedElection.enddate).toLocaleString()}
           </p>
           <p className="election-description">
             <strong>Description:</strong> {selectedElection.description}
@@ -242,11 +409,7 @@ const ViewElection = () => {
             </button>
           )}
 
-          {selectedElection.winner && (
-            <div className="winner-box">
-              🏆 <strong>Currently Leading:</strong> {selectedElection.winner.name} with {selectedElection.winner.voteCount} vote(s)
-            </div>
-          )}
+          {renderTieMessage()}
 
           <button className="view-btn" onClick={() => setShowLog(!showLog)}>
             {showLog ? "Hide Voting Log" : "View Voting Log"}
@@ -264,40 +427,96 @@ const ViewElection = () => {
 
   return (
     <div className="election-list-container">
-      <h2>Available Elections</h2>
-      {elections.map((filteredelectionbydate) => (
-        <div key={filteredelectionbydate.electionid} className="election-card">
-          <h3>{filteredelectionbydate.electionname}</h3>
-          <p>{filteredelectionbydate.description}</p>
-          <p>
-            Dates: {filteredelectionbydate.startdate} to {filteredelectionbydate.enddate}
-          </p>
+      <div className="dashboard-tabs">
+        <button
+          className={activeTab === "available" ? "active" : ""}
+          onClick={() => setActiveTab("available")}
+        >
+          🟢 Available
+        </button>
+        <button
+          className={activeTab === "ended" ? "active" : ""}
+          onClick={() => setActiveTab("ended")}
+        >
+          🔚 Ended
+        </button>
+      </div>
 
-          <div className="candidate-box">
-            <h4>Candidates</h4>
-            <ul>
-              {filteredelectionbydate.candidates.map((c) => (
-                <li key={c.id}>
-                  {c.name} - {c.voteCount} vote(s)
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {filteredelectionbydate.winner && (
-            <div className="winner-box">
-              <strong>Leading:</strong> {filteredelectionbydate.winner.name} with {filteredelectionbydate.winner.voteCount} vote(s)
+      {activeTab === "available" && (
+        <>
+          <h2>Available Elections</h2>
+          {elections.filter(e => e.has_started && e.not_ended).map((e) => (
+            <div key={e.electionid} className="election-card">
+              <h3>{e.electionname}</h3>
+              <p>{e.description}</p>
+              <p>
+                Dates: {e.startdate} to {e.enddate}
+              </p>
+              <div className="candidate-box">
+                <h4>Candidates</h4>
+                <ul>
+                  {e.candidates.map((c) => (
+                    <li key={c.id}>
+                      {c.name} - {c.voteCount} vote(s)
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              {e.winner && (
+                <div className="winner-box">
+                  <strong>Leading:</strong> {e.winner.name} with {e.winner.voteCount} vote(s)
+                </div>
+              )}
+              <button
+                className="view-btn"
+                onClick={() => navigate(`/view-elections?id=${e.electionid}`)}
+              >
+                View Details
+              </button>
             </div>
-          )}
+          ))}
+        </>
+      )}
 
-          <button
-            className="view-btn"
-            onClick={() => navigate(`/view-elections?id=${filteredelectionbydate.electionid}`)}
-          >
-            View Details
-          </button>
-        </div>
-      ))}
+      {activeTab === "ended" && (
+        <>
+          <h2>Ended Elections</h2>
+          {elections.filter(e => !e.not_ended).map((e) => (
+            <div key={e.electionid} className="election-card">
+              <h3>{e.electionname}</h3>
+              <p>{e.description}</p>
+              <p>
+                Dates: {e.startdate} to {e.enddate}
+              </p>
+              <div className="candidate-box">
+                <h4>Candidates</h4>
+                <ul>
+                  {e.candidates.map((c) => (
+                    <li key={c.id}>
+                      {c.name} - {c.voteCount} vote(s)
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              {e.candidates?.some(c => c.is_manual_winner) ? (
+              <div className="winner-box">
+                🏆 <strong>Final Winner (Creator Decision):</strong> {e.candidates.find(c => c.is_manual_winner)?.name}
+              </div>
+            ) : e.winner && (
+                <div className="winner-box">
+                  <strong>Top Voted:</strong> {e.winner.name} with {e.winner.voteCount} vote(s)
+                </div>
+              )}
+              <button
+                className="view-btn"
+                onClick={() => navigate(`/view-elections?id=${e.electionid}`)}
+              >
+                View Details
+              </button>
+            </div>
+          ))}
+        </>
+      )}
     </div>
   );
 };
