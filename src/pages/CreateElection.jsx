@@ -32,6 +32,7 @@ const CreateElection = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tieBreakTypeId, setTieBreakTypeId] = useState(null);
   const [tieBreakTypes, setTieBreakTypes] = useState([]);
+  const [tiebreakRole, setTiebreakRole] = useState("");
 
   useEffect(() => {
     const checkSession = async () => {
@@ -130,7 +131,8 @@ const CreateElection = () => {
       visibility: visibility === "public",
       access_token: accessToken,
       userid: session.user.id,
-      tie_break_type_id: tieBreakTypeId || null
+      tie_break_type_id: tieBreakTypeId || null,
+      tiebreak_role: tieBreakTypeId === 104 ? tiebreakRole : null
     };
 
     const { data, error } = await supabase.from("election").insert([electionData]).select();
@@ -198,14 +200,24 @@ const CreateElection = () => {
                   <option value={2}>Weighted</option>
                   <option value={3}>Placeholder</option>
                 </select>
-                {/* $1 */}
-<label>Tie-Breaking Method:</label>
-<select value={tieBreakTypeId || ""} onChange={(e) => setTieBreakTypeId(parseInt(e.target.value))}>
-  <option value="">Select a method</option>
-  {tieBreakTypes?.map((t) => (
-    <option key={t.id} value={t.id}>{t.description}</option>
-  ))}
-</select>
+                <label>Tie-Breaking Method:</label>
+                <select value={tieBreakTypeId || ""} onChange={(e) => setTieBreakTypeId(parseInt(e.target.value))}>
+                  <option value="">Select a method</option>
+                  {tieBreakTypes?.map((t) => (
+                    <option key={t.id} value={t.id}>{t.description}</option>
+                  ))}
+                </select>
+                {tieBreakTypeId === 104 && (
+                  <>
+                    <label>Role to resolve tie:</label>
+                    <select value={tiebreakRole} onChange={(e) => setTiebreakRole(e.target.value)}>
+                      <option value="">Select Role</option>
+                      {roles.map((r, i) => (
+                        <option key={i} value={r.description}>{r.description}</option>
+                      ))}
+                    </select>
+                  </>
+                )}
                 <div className="password-toggle">
                   <label>
                     Add Password to Election

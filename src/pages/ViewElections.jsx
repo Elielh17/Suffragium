@@ -45,6 +45,65 @@ const ViewElection = () => {
     resolveRandomTie();
   }, [selectedElection]);
 
+  useEffect(() => {
+    const resolveRoleBasedTie = async () => {
+      if (
+        selectedElection &&
+        selectedElection.tie_break_type_id === 104 &&
+        new Date(selectedElection.enddate) < new Date() &&
+        selectedElection.isTie &&
+        !selectedElection.candidates.some(c => c.is_manual_winner)
+      ) {
+        const priorityRole = selectedElection.tiebreak_role;
+        const tiedCandidateIds = selectedElection.tiedCandidates.map(c => c.id);
+  
+        const { data: votes } = await supabase
+          .from("votes")
+          .select("candidateid, email, weight")
+          .eq("electionid", selectedElection.electionid)
+          .in("candidateid", tiedCandidateIds);
+  
+        const { data: roleAssignments } = await supabase
+          .from("user_role")
+          .select("email, role")
+          .eq("electionid", selectedElection.electionid);
+  
+        const prioritizedVotes = votes?.filter(v => {
+          const role = roleAssignments?.find(r => r.email === v.email);
+          return role?.role === priorityRole;
+        }) || [];
+  
+        const voteCountMap = {};
+        for (const vote of prioritizedVotes) {
+          if (!vote.candidateid) continue;
+          voteCountMap[vote.candidateid] = (voteCountMap[vote.candidateid] || 0) + (vote.weight || 1);
+        }
+  
+        let highestVotes = -1;
+        let selectedCandidateId = null;
+        for (const [candidateId, count] of Object.entries(voteCountMap)) {
+          if (count > highestVotes) {
+            highestVotes = count;
+            selectedCandidateId = candidateId;
+          }
+        }
+  
+        if (selectedCandidateId) {
+          const { error } = await supabase
+            .from("candidates")
+            .update({ is_manual_winner: true })
+            .eq("id", selectedCandidateId);
+  
+          if (!error) {
+            window.location.reload();
+          }
+        }
+      }
+    };
+    resolveRoleBasedTie();
+  }, [selectedElection]);
+  
+
   const renderTieMessage = () => {
     if (!selectedElection) return null;
 
@@ -52,11 +111,22 @@ const ViewElection = () => {
     const manualWinner = selectedElection.candidates.find(c => c.is_manual_winner);
 
     if (manualWinner) {
+      let method = "Creator Decision";
+      let explanation = "This tie has been resolved manually by the election creator.";
+
+      if (selectedElection.tie_break_type_id === 102) {
+        method = "Random";
+        explanation = "This tie was resolved automatically using a random method.";
+      } else if (selectedElection.tie_break_type_id === 104) {
+        method = "Role-Based";
+        explanation = `This tie was resolved using role-based logic, giving priority to the role: ${selectedElection.tiebreak_role}`;
+      }
+
       return (
         <div className="winner-box">
           <FaTrophy style={{ marginRight: 6 }} />
-          <strong>Final Winner (Random):</strong> {manualWinner.name}<br />
-          <em>This tie was resolved automatically using a random method.</em>
+          <strong>Final Winner ({method}):</strong> {manualWinner.name}<br />
+          <em>{explanation}</em>
         </div>
       );
     }

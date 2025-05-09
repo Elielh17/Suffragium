@@ -1,4 +1,3 @@
-// src/pages/ManageElection.jsx
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../supabaseClient";
@@ -19,17 +18,18 @@ const ManageElection = () => {
   const [editingDescription, setEditingDescription] = useState(false);
   const [newDescription, setNewDescription] = useState("");
   const [newAssignment, setNewAssignment] = useState({ email: "", role: "", weight: 1 });
+  const [revoteStartDate, setRevoteStartDate] = useState("");
+  const [revoteEndDate, setRevoteEndDate] = useState("");
+  const [newElectionLink, setNewElectionLink] = useState("");
 
   const electionId = searchParams.get("id");
   const accessToken = searchParams.get("token");
-  const electionIdParam = searchParams.get("id");
 
   useEffect(() => {
     const loadElection = async () => {
-    let tied = [];
-    let candidateList = [];
-    const { data: tieData } = await supabase.from("types").select("id, description").gte("id", 101);
-    if (tieData) setTieBreakTypes(tieData);
+      const { data: tieData } = await supabase.from("types").select("id, description").gte("id", 101);
+      if (tieData) setTieBreakTypes(tieData);
+
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -39,19 +39,19 @@ const ManageElection = () => {
       let query;
       if (accessToken) {
         query = supabase.from("election").select("*, candidates(*)").eq("access_token", accessToken);
-      } else if (electionIdParam) {
-        query = supabase.from("election").select("*").eq("electionid", electionIdParam);
+      } else if (electionId) {
+        query = supabase.from("election").select("*, candidates(*)").eq("electionid", electionId);
       } else {
         return alert("No election identifier provided.");
       }
 
       const { data, error } = await query;
       if (error || !data) return alert("Election not found.");
-      if (data.userid && data.userid !== session.user.id) {
+      const electionData = Array.isArray(data) ? data[0] : data;
+      if (electionData.userid && electionData.userid !== session.user.id) {
         alert("You are not authorized to manage this election.");
         return navigate("/");
       }
-      const electionData = Array.isArray(data) ? data[0] : data;
       setElection(electionData);
       setNewDescription(electionData.description);
 
@@ -59,38 +59,106 @@ const ManageElection = () => {
         .from("candidates")
         .select("*")
         .eq("electionid", electionData.electionid);
+
       if (candidates) {
         electionData.candidates = candidates;
+        setElection({ ...electionData, candidates });
       }
-      setNewDescription(data.description);
 
-      // Automatically check for tied candidates if creator decides
-      if (electionData.tie_break_type_id === 103 && new Date(electionData.enddate) < new Date()) {
-        const { data: candidates } = await supabase
-          .from("candidates")
-          .select("id, name")
-          .eq("electionid", electionData.electionid);
+      const { data: votes } = await supabase
+        .from("votes")
+        .select("candidateid, email")
+        .eq("electionid", electionData.electionid);
 
-        const { data: votes } = await supabase
-          .from("votes")
-          .select("candidateid, email, weight")
-          .eq("electionid", electionData.electionid);
+      const voteCountMap = {};
+      for (const vote of votes) {
+        if (!vote.candidateid) continue;
+        voteCountMap[vote.candidateid] = (voteCountMap[vote.candidateid] || 0) + 1;
+      }
 
-        const voteCountMap = {};
-        for (const vote of votes) {
-          const cid = vote.candidateid;
-          if (!cid) continue;
-          voteCountMap[cid] = (voteCountMap[cid] || 0) + (vote.weight || 1);
-        }
+      const maxVotes = Math.max(...Object.values(voteCountMap));
+      const tied = Object.entries(voteCountMap).filter(([_, count]) => count === maxVotes);
 
-        const maxVotes = Math.max(...Object.values(voteCountMap));
-        tied = candidates.filter(c => voteCountMap[c.id] === maxVotes);
-        setTiedCandidates(tied);
+      if (electionData.tie_break_type_id === 105 && new Date(electionData.enddate) < new Date() && tied.length > 1) {
+        setTiedCandidates(candidates.filter(c => tied.map(([id]) => parseInt(id)).includes(c.id)));
+        setShowWinnerPopup(true);
       }
     };
 
     loadElection();
   }, [electionId, accessToken, navigate]);
+
+  const createElectionFromTemplate = async (templateElection, candidateList, startDate, endDate) => {
+  const {
+    data: { session }
+  } = await supabase.auth.getSession();
+
+  const accessToken = templateElection.visibility ? null : crypto.randomUUID();
+
+  const electionData = {
+    electionname: `${templateElection.electionname} (Revote)`,
+    description: `Revote due to tie in election: ${templateElection.electionname}`,
+    startdate: startDate,
+    enddate: endDate,
+    statuscode: 1,
+    typecode: templateElection.typecode,
+    permittedrolecodes: templateElection.permittedrolecodes || [],
+    visibility: templateElection.visibility,
+    access_token: accessToken,
+    userid: session.user.id,
+    tie_break_type_id: templateElection.tie_break_type_id,
+    tiebreak_role: templateElection.tiebreak_role || null
+  };
+
+  // Insert new election
+  const { data: newElection, error } = await supabase
+    .from("election")
+    .insert(electionData)
+    .select()
+    .single();
+
+  if (error || !newElection) {
+    console.error("❌ Supabase Insert Error:", error);
+    alert("Failed to create new election.");
+    throw new Error("Election insert failed.");
+  }
+
+  // Duplicate only tied candidates
+  const insertCandidates = candidateList.map(c => ({
+    name: c.name,
+    description: c.description,
+    image: c.image,
+    electionid: newElection.electionid
+  }));
+
+  const { error: candidateError } = await supabase
+    .from("candidates")
+    .insert(insertCandidates);
+
+  if (candidateError) {
+    console.error("❌ Failed to insert candidates:", candidateError);
+    alert("Election was created but candidates failed to duplicate.");
+  }
+
+  return {
+    id: newElection.electionid,
+    link: accessToken
+      ? `${window.location.origin}/Suffragium/#/view-elections?token=${accessToken}`
+      : `${window.location.origin}/Suffragium/#/view-elections?id=${newElection.electionid}`
+  };
+};
+
+
+  const handleRevoteSubmit = async () => {
+    if (!revoteStartDate || !revoteEndDate) return alert("Please provide both start and end dates.");
+    try {
+      const { id, link } = await createElectionFromTemplate(election, tiedCandidates, revoteStartDate, revoteEndDate);
+      setNewElectionLink(link);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to create revote.");
+    }
+  };
 
   const loadRoles = async () => {
     const { data, error } = await supabase
@@ -189,42 +257,50 @@ const ManageElection = () => {
           <p><strong>Start:</strong> {new Date(election.startdate).toLocaleString()}</p>
           <p><strong>End:</strong> {new Date(election.enddate).toLocaleString()}</p>
           <p><strong>Visibility:</strong> {election.visibility ? "Public" : "Private"}</p>
-<p><strong>Status:</strong> {new Date(election.enddate) < new Date() ? "Ended" : "Open"}</p>
+          <p><strong>Status:</strong> {new Date(election.enddate) < new Date() ? "Ended" : "Open"}</p>
           <p><strong>Tie-Break Method:</strong> {tieBreakTypes.find(t => t.id === election.tie_break_type_id)?.description || 'None'}</p>
+          {election.tie_break_type_id === 104 && election.tiebreak_role && (
+            <p><strong>Role-Based Priority:</strong> {election.tiebreak_role}</p>
+          )}
           <h4>Candidates</h4>
-<ul>
-  {election.candidates?.map((c, i) => (
-    <li key={i}>
-      <strong>{c.name}</strong>: {c.description || "No description"}
-    </li>
-  ))}
-</ul>
+          <ul>
+            {election.candidates?.map((c, i) => (
+              <li key={i}>
+                <strong>{c.name}</strong>: {c.description || "No description"}
+              </li>
+            ))}
+          </ul>
 
-{new Date(election.enddate) < new Date() && election.candidates && (() => {
-  const manualWinner = election.candidates.find(c => c.is_manual_winner);
-  const sorted = [...election.candidates].sort((a, b) => b.voteCount - a.voteCount);
-  const topVoted = sorted[0];
-  const topVoteCount = topVoted?.voteCount;
-  const tied = sorted.filter(c => c.voteCount === topVoteCount);
+          {new Date(election.enddate) < new Date() && election.candidates && (() => {
+            const manualWinner = election.candidates.find(c => c.is_manual_winner);
+            const sorted = [...election.candidates].sort((a, b) => b.voteCount - a.voteCount);
+            const topVoted = sorted[0];
+            const topVoteCount = topVoted?.voteCount;
+            const tied = sorted.filter(c => c.voteCount === topVoteCount);
 
-  if (manualWinner) {
-    return (
-      <div className="winner-box">
-        <p><strong>Winner:</strong> {manualWinner.name}</p>
-        <em>This tie has been resolved by the election creator.</em>
-      </div>
-    );
-  } else if (tied.length === 1) {
-    return (
-      <div className="winner-box">
-        <p><strong>Winner:</strong> {topVoted.name}</p>
-        <em>This election has concluded with a clear winner.</em>
-      </div>
-    );
-  } else {
-    return null;
-  }
-})()}
+            if (manualWinner) {
+              const methodLabel = election.tie_break_type_id === 105 ? "Revote" : "Creator Decision";
+              const explanation = election.tie_break_type_id === 105
+                ? "This tie was resolved through a revote."
+                : "This tie has been resolved by the election creator.";
+
+              return (
+                <div className="winner-box">
+                  <p><strong>Winner:</strong> {manualWinner.name}</p>
+                  <em>{explanation}</em>
+                </div>
+              );
+            } else if (tied.length === 1) {
+              return (
+                <div className="winner-box">
+                  <p><strong>Winner:</strong> {topVoted.name}</p>
+                  <em>This election has concluded with a clear winner.</em>
+                </div>
+              );
+            } else {
+              return null;
+            }
+          })()}
         </section>
 
         <section>
@@ -340,16 +416,33 @@ const ManageElection = () => {
       </div>
     )
   ) : <p>No tie to resolve.</p>}
+
+  
 </section>
       )}
 
-      {showWinnerPopup && (
-        <div className="popup-message">
-          <p>✅ Winner selected: <strong>{winnerName}</strong></p>
+{showWinnerPopup && (
+      <div className="popup-message">
+        <p>✅ Winner selected: <strong>{winnerName}</strong></p>
+        {election?.tie_break_type_id === 105 ? (
+          <>
+            <p>This tie is going to be resolved through a revote. Configure the new election below.</p>
+            <input type="datetime-local" value={revoteStartDate} onChange={(e) => setRevoteStartDate(e.target.value)} />
+            <input type="datetime-local" value={revoteEndDate} onChange={(e) => setRevoteEndDate(e.target.value)} />
+            <button onClick={handleRevoteSubmit}>Create Election</button>
+            {newElectionLink && (
+              <div style={{ marginTop: 12 }}>
+                <p>New election created:</p>
+                <a href={newElectionLink}>{newElectionLink}</a>
+              </div>
+            )}
+          </>
+        ) : (
           <p>This tie has been resolved manually.</p>
-          <button onClick={() => setShowWinnerPopup(false)}>Close</button>
-        </div>
-      )}
+        )}
+        <button onClick={() => setShowWinnerPopup(false)}>Close</button>
+      </div>
+    )}
     </div>
   </div>
   );
