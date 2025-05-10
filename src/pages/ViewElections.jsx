@@ -336,24 +336,24 @@ const ViewElection = () => {
         .eq("electionid", electionId)
         .maybeSingle();
 
-      // // Send receipt email
-      // const response = await fetch("https://cxlrsjulixkuhbgtxwho.supabase.co/functions/v1/send-receipt", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({
-      //     to: userEmail,
-      //     candidateName: candidateData?.name,
-      //     electionName: electionMeta?.electionname
-      //   })
-      // });
+      // Send receipt email
+      const response = await fetch("https://cxlrsjulixkuhbgtxwho.supabase.co/functions/v1/send-receipt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: userEmail,
+          candidateName: candidateData?.name,
+          electionName: electionMeta?.electionname
+        })
+      });
 
-      // if (response.ok) {
-      //   alert("✅ Vote receipt email sent!");
-      // } else {
-      //   const errorText = await response.text();
-      //   console.warn("Email failed to send:", errorText);
-      //   alert("⚠️ Vote receipt email failed to send.");
-      // }
+      if (response.ok) {
+        alert("✅ Vote receipt email sent!");
+      } else {
+        const errorText = await response.text();
+        console.warn("Email failed to send:", errorText);
+        alert("⚠️ Vote receipt email failed to send.");
+      }
 
       
     } 
