@@ -309,8 +309,8 @@ const ManageElection = () => {
             type="text"
             value={
               accessToken
-                ? `${window.location.origin}/Suffragium/#/view-elections?token=${accessToken}`
-                : `${window.location.origin}/Suffragium/#/view-elections?id=${election.electionid}`
+                ? `${window.location.origin}/#/view-elections?token=${accessToken}`
+                : `${window.location.origin}/#/view-elections?id=${election.electionid}`
             }
             readOnly
             onClick={(e) => e.target.select()}
