@@ -61,3 +61,10 @@
 .home-button.join:hover {
     background-color: #218838;
 }
+
+.home-logo {
+    width: 250px;
+    height: auto;
+    margin-bottom: 0px;
+    filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.5));
+}
