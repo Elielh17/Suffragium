@@ -401,14 +401,14 @@ const ViewElection = () => {
     return (
       <div className="election-detail-container">
         <button className="back-btn" onClick={() => {
-  setSelectedElection(null);
-  const params = new URLSearchParams(location.search);
-  if (params.has("id") || params.has("token")) {
-    navigate("/view-elections", { replace: true });
-  }
-}}>
-  ← Back to Elections
-</button>
+          setSelectedElection(null);
+          const params = new URLSearchParams(location.search);
+          if (params.has("id") || params.has("token")) {
+            navigate("/view-elections", { replace: true });
+          }
+        }}>
+          ← Back to Elections
+        </button>
         <div className="election-card expanded">
           <h2>{selectedElection.electionname}</h2>
           <p className="election-dates">

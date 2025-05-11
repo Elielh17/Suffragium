@@ -56,9 +56,9 @@ const Navbar = () => {
                         <div className="dropdown-menu">
                             {user ? (
                                 <>
-                                    <Link to="/profile" className="dropdown-item">Profile</Link>
-                                    <Link to="/settings" className="dropdown-item">Settings</Link>
-                                    <hr />
+                                    {/* <Link to="/profile" className="dropdown-item">Profile</Link> */}
+                                    {/* <Link to="/settings" className="dropdown-item">Settings</Link> */}
+                                    {/* <hr /> */}
                                     <button className="dropdown-item" onClick={handleLogout}>Log Out</button>
                                 </>
                             ) : (
