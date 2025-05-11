@@ -200,6 +200,12 @@ const CreateElection = () => {
                   <option value={2}>Weighted</option>
                   <option value={3}>Placeholder</option>
                 </select>
+                <label>Election Visibility:</label>
+                <select value={visibility} onChange={(e) => setVisibility(e.target.value)}>
+                  <option value="public">Public (anyone can view and vote)</option>
+                  <option value="private">Private (only via invite link)</option>
+                </select>
+
                 <label>Tie-Breaking Method:</label>
                 <select value={tieBreakTypeId || ""} onChange={(e) => setTieBreakTypeId(parseInt(e.target.value))}>
                   <option value="">Select a method</option>
