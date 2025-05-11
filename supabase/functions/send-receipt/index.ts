@@ -12,30 +12,32 @@ serve(async (req: Request) => {
     });
   }
 
-  // ✅ Debug logging
   console.log("🔔 Edge Function called");
 
   const { to, candidateName, electionName } = await req.json();
-  const resendApiKey = Deno.env.get("RESEND_API_KEY");
+  const mailersendApiKey = Deno.env.get("MAILERSEND_API_KEY");
 
-  console.log("RESEND_API_KEY:", resendApiKey); // Only for test; remove later
+  console.log("MailerSend API key loaded:", !!mailersendApiKey);
 
-  const response = await fetch("https://api.resend.com/emails", {
+  const response = await fetch("https://api.mailersend.com/v1/email", {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${resendApiKey}`,
+      "Authorization": `Bearer ${mailersendApiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: "Suffragium <onboarding@resend.dev>",
-      to,
+      from: {
+        email: "no-reply@suffragium.online",
+        name: "Suffragium",
+      },
+      to: [{ email: to }],
       subject: `🗳️ Vote Receipt: ${electionName}`,
       html: `
         <div style="font-family: Arial, sans-serif; color: #333;">
           <h2 style="color: #007bff;">🗳️ Suffragium Vote Receipt</h2>
           <p>Thank you for voting in <strong>${electionName}</strong>.</p>
           <p>Your vote has been recorded for:</p>
-          <p style="font-size: 18px; font-weight: bold; color: #28a745;">✅ ${candidateName}</p>
+          <p style="font-size: 18px; font-weight: bold; color: #28a745;">${candidateName}</p>
           <hr />
           <p>If this wasn't you, contact your election admin.</p>
           <p style="font-size: 12px; color: #888;">This is an automated message from Suffragium.</p>
