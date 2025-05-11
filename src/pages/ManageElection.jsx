@@ -143,8 +143,8 @@ const ManageElection = () => {
   return {
     id: newElection.electionid,
     link: accessToken
-      ? `${window.location.origin}/Suffragium/#/view-elections?token=${accessToken}`
-      : `${window.location.origin}/Suffragium/#/view-elections?id=${newElection.electionid}`
+      ? `${window.location.origin}/#/view-elections?token=${accessToken}`
+      : `${window.location.origin}/#/view-elections?id=${newElection.electionid}`
   };
 };
 
