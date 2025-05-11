@@ -254,7 +254,7 @@ const CreateElection = () => {
                     setNewCandidateImage(e.target.files[0]);
                     setImagePreview(URL.createObjectURL(e.target.files[0]));
                   }} />
-                  {imagePreview && <img src={imagePreview} alt="Preview" style={{ maxHeight: 150, marginTop: 8 }} />}
+                  {imagePreview && <img src={imagePreview} alt="Preview" style={{ marginTop: 8 }} />}
                   <button type="button" onClick={addCandidate}>Add Candidate</button>
                 </div>
               </div>

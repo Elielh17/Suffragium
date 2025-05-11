@@ -190,4 +190,103 @@
     color: #00b4d8;
     font-weight: bold;
   }
+
+  .search-sort-controls {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap; /* allows wrapping on small screens */
+    margin: 20px 0;
+  }
+
+  .search-sort-controls input[type="text"] {
+    padding: 10px 14px;
+    border-radius: 6px;
+    border: 1px solid #444;
+    background-color: #2b2b2b;
+    color: #fff;
+    font-size: 16px;
+    transition: border-color 0.3s ease;
+  }
+
+  .search-sort-controls input[type="text"]:focus {
+    border-color: #00b4d8;
+    outline: none;
+  }
+
+  .search-sort-controls select {
+    padding: 10px 14px;
+    border-radius: 6px;
+    border: 1px solid #444;
+    background-color: #2b2b2b;
+    color: #fff;
+    font-size: 16px;
+    appearance: none;
+    background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="white" class="bi bi-caret-down-fill" viewBox="0 0 16 16"><path d="M7.247 11.14l-4.796-5.481c-.566-.647-.106-1.659.753-1.659h9.592c.86 0 1.32 1.012.753 1.659l-4.796 5.481a1 1 0 0 1-1.506 0z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 16px 16px;
+  }
+
+  .search-sort-controls select:focus {
+    border-color: #00b4d8;
+    outline: none;
+  }
+  
+  .autocomplete-list {
+    list-style: none;
+    margin: 4px 0 0;
+    padding: 0;
+    background-color: #2b2b2b;
+    border: 1px solid #444;
+    border-radius: 6px;
+    max-height: 150px;
+    overflow-y: auto;
+    position: absolute;
+    z-index: 100;
+    width: 100%;
+  }
+
+  .autocomplete-list li {
+    padding: 8px 12px;
+    color: #ccc;
+    cursor: pointer;
+  }
+
+  .autocomplete-list li:hover {
+    background-color: #00b4d8;
+    color: #fff;
+  }
+
+  .dashboard-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin: 0px auto;
+  max-width: 720px;
+}
+
+.dashboard-tabs button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  background-color: #2b2b2b;
+  color: #ccc;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.dashboard-tabs button.active {
+  background-color: #111;
+  color: #fff;
+}
+
+.dashboard-tabs button:hover {
+  background-color: #333;
+}
+
+
+
   

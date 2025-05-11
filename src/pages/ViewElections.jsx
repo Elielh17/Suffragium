@@ -18,6 +18,9 @@ const ViewElection = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const today = new Date().toISOString().split("T")[0];
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState("date"); // or "votes", etc.
+
 
   useEffect(() => {
     const resolveRandomTie = async () => {
@@ -479,19 +482,34 @@ const ViewElection = () => {
   return (
     <div className="election-list-container">
       <div className="dashboard-tabs">
-        <button
-          className={activeTab === "available" ? "active" : ""}
-          onClick={() => setActiveTab("available")}
-        >
-          🟢 Available
-        </button>
-        <button
-          className={activeTab === "ended" ? "active" : ""}
-          onClick={() => setActiveTab("ended")}
-        >
-          🔚 Ended
-        </button>
-      </div>
+          <button
+            className={activeTab === "available" ? "active" : ""}
+            onClick={() => setActiveTab("available")}
+          >
+            🟢 Available
+          </button>
+          <button
+            className={activeTab === "ended" ? "active" : ""}
+            onClick={() => setActiveTab("ended")}
+          >
+            🔚 Ended
+          </button>
+        </div>
+        <div className="dashboard-tabs">
+          <div className="search-sort-controls">
+            <input
+              type="text"
+              placeholder="Search by name or description..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+              <option value="date">Sort by Date</option>
+              <option value="votes">Sort by Total Votes</option>
+              <option value="name">Sort by Name</option>
+            </select>
+          </div>
+        </div>
 
       {activeTab === "available" && (
         <>
