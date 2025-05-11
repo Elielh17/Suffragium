@@ -514,7 +514,13 @@ const ViewElection = () => {
       {activeTab === "available" && (
         <>
           <h2>Available Elections</h2>
-          {elections.filter(e => e.has_started && e.not_ended).map((e) => (
+          {elections
+            .filter(e => e.has_started && e.not_ended)
+            .filter(e =>
+              e.electionname.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              e.description.toLowerCase().includes(searchTerm.toLowerCase())
+            )
+            .map((e) => (
             <div key={e.electionid} className="election-card">
               <h3>{e.electionname}</h3>
               <p>Description: {e.description}</p>
@@ -550,7 +556,14 @@ const ViewElection = () => {
       {activeTab === "ended" && (
         <>
           <h2>Ended Elections</h2>
-          {elections.filter(e => !e.not_ended).map((e) => (
+          {elections
+            .filter(e => !e.not_ended)
+            .filter(e =>
+              e.electionname.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              e.description.toLowerCase().includes(searchTerm.toLowerCase())
+            )
+            .map((e) => (
+
             <div key={e.electionid} className="election-card">
               <h3>{e.electionname}</h3>
               <p>Description: {e.description}</p>
