@@ -355,6 +355,7 @@ const ViewElection = () => {
         alert("⚠️ Vote receipt email failed to send.");
       }
 
+      window.location.reload();
       
     } 
     else {
